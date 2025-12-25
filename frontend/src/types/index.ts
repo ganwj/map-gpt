@@ -47,14 +47,36 @@ export interface SelectedPlace {
   lng: number;
 }
 
+export interface TimePeriodPlaces {
+  Morning?: string[];
+  Afternoon?: string[];
+  Evening?: string[];
+  Accommodation?: string[];
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   map_action?: MapAction | null;
   followUpSuggestions?: string[];
-  searchQuery?: string; // Track which search query this message is associated with
+  searchQuery?: string;
+  placesByDay?: Record<string, string[]> | null;
+  placesByTimePeriod?: Record<string, TimePeriodPlaces> | null;
+  isError?: boolean;
+  failedMessage?: string;
 }
+
+export interface PlanningPreferences {
+  duration: string;
+  interests: string[];
+  travelStyle: string;
+  attractions: string;
+}
+
+export const INTEREST_OPTIONS = ['Food', 'Culture', 'Shopping', 'Nature', 'Nightlife', 'History', 'Adventure', 'Relaxation'] as const;
+export const TRAVEL_STYLES = ['Budget', 'Mid-range', 'Luxury'] as const;
+export const DURATION_OPTIONS = ['1-2 days', '3-4 days', '5-7 days', '1-2 weeks', '2+ weeks'] as const;
 
 // Search history entry to track places per search
 export interface SearchHistory {

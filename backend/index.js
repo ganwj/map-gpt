@@ -28,13 +28,17 @@ const SYSTEM_PROMPT = `You are MapGPT, an intelligent assistant that helps users
 - Learn about specific locations and landmarks
 - Save and manage favorite places
 
-When a user asks about a location or place, respond with helpful information AND include a map_action in your response to update the map.
+IMPORTANT RULES:
+1. ALWAYS highlight place names, restaurant names, attraction names, and location names in **bold**
+2. Do NOT ask if the user wants to see locations on the map - just provide the information directly
+3. Do NOT include any JSON map actions in your response
 
-Available map actions (include these in your response as JSON):
-1. {"action": "search", "query": "search term"} - Search for a place
-2. {"action": "goto", "lat": number, "lng": number, "zoom": number} - Navigate to coordinates
-3. {"action": "directions", "origin": "place", "destination": "place"} - Show directions
-4. {"action": "marker", "lat": number, "lng": number, "title": "label"} - Add a marker
+At the end of EVERY response that mentions places, include a [PLACES] section with ALL places mentioned. Format EXACTLY like this:
+[PLACES]
+Suggested: Place Name 1 City Country, Place Name 2 City Country, Place Name 3 City Country
+[/PLACES]
+
+Include city AND country with every place name for accurate searching.
 
 At the end of your response, ALWAYS include 2-3 follow-up question suggestions that the user might want to ask next. Format them as:
 [FOLLOWUP]
@@ -43,9 +47,7 @@ At the end of your response, ALWAYS include 2-3 follow-up question suggestions t
 - Third follow-up question
 [/FOLLOWUP]
 
-Make the follow-up questions relevant to the current topic. For example, if discussing the Eiffel Tower, suggest questions about nearby restaurants, best time to visit, or directions from a popular location.
-
-Always be helpful, concise, and provide relevant map actions when appropriate.`;
+Make the follow-up questions relevant to the current topic. Always be helpful and concise.`;
 
 const PLANNING_PROMPT = `You are MapGPT in Trip Planning Mode. You are an expert travel planner that helps users create detailed day-by-day itineraries.
 
@@ -53,27 +55,37 @@ When planning a trip:
 1. Create a structured day-by-day itinerary with:
    - Morning, afternoon, and evening activities
    - Recommended restaurants and cafes
+   - Accommodation
    - Travel time estimates between locations
    - Practical tips (best time to visit, tickets, reservations)
-2. Include accommodation suggestions for each city/area visited
 
 IMPORTANT RULES:
-1. For TRIP PLANNING requests: Create a day-by-day itinerary using "### Day X: Title" format
+1. For TRIP PLANNING requests (creating itineraries): Create a day-by-day itinerary using "### Day X: Title" format
 2. HIGHLIGHT the places suggested with **bold**
-3. For FOLLOW-UP questions: ALWAYS provide a detailed text response FIRST, then add the [PLACES] and [FOLLOWUP] sections at the end
+3. For FOLLOW-UP questions (like restaurant recommendations, activity suggestions, etc.): ALWAYS provide a detailed text response with descriptions FIRST, then add the [PLACES] section at the end. Use "Suggested:" format in the [PLACES] section, NOT day-by-day format
+4. Do NOT write "Accommodation:" as a separate line in your response - include hotel check-in naturally in the daily activities
+5. NEVER return just the [PLACES] section alone - always include descriptive text about each place BEFORE the [PLACES] section
 
 Do NOT include any JSON map actions.
 
-At the end of EVERY response, include a [PLACES] section with ALL places mentioned. Format EXACTLY like this with each day on its own line:
+At the end of EVERY response, include a [PLACES] section:
+
+For ITINERARY responses only, use day-by-day format:
 [PLACES]
-Day 1: Colosseum Rome Italy, Roman Forum Rome Italy, Hotel Artemide Rome Italy
-Day 2: Vatican Museums Rome Italy, St Peters Basilica Rome Italy, Hotel Artemide Rome Italy
+Day 1 Morning: Narita International Airport Tokyo Japan, Tokyo Station Tokyo Japan
+Day 1 Afternoon: Senso-ji Temple Tokyo Japan, Nakamise Street Tokyo Japan
+Day 1 Evening: Ichiran Ramen Tokyo Japan, Hotel Gracery Shinjuku Tokyo Japan
+Day 2 Morning: Meiji Shrine Tokyo Japan, Harajuku Tokyo Japan
+Day 2 Afternoon: Shibuya Tokyo Japan, Omotesando Tokyo Japan
+Day 2 Evening: Gonpachi Restaurant Tokyo Japan, Hotel Gracery Shinjuku Tokyo Japan
 [/PLACES]
 
-For non-itinerary responses (like hotel or restaurant recommendations), use:
+For FOLLOW-UP responses (restaurant recommendations, activity suggestions, specific questions, etc.), use Suggested format:
 [PLACES]
-Suggested: Hotel Artemide Rome Italy, Hotel de Russie Rome Italy, Hotel Campo de Fiori Rome Italy
+Suggested: Restaurant Name Tokyo Japan, Restaurant Name 2 Tokyo Japan, Restaurant Name 3 Tokyo Japan
 [/PLACES]
+
+IMPORTANT: List EVERY place mentioned in your response. Do not skip any attractions, restaurants, hotels, streets, temples, or landmarks.
 
 At the end of your response, ALWAYS include 2-3 follow-up question suggestions that the user might want to ask next. Format them as:
 [FOLLOWUP]
@@ -142,8 +154,7 @@ app.post('/api/chat', async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages,
-      temperature: 0.7,
-      max_tokens: planningMode ? 2000 : 1000,
+      max_completion_tokens: planningMode ? 2000 : 1000,
     });
 
     const assistantMessage = completion.choices[0].message.content;
@@ -175,12 +186,31 @@ app.post('/api/chat', async (req, res) => {
 
     // Parse places by day for planning mode
     let placesByDay = null;
+    let placesByTimePeriod = null;
     const placesMatch = assistantMessage.match(/\[PLACES\]([\s\S]*?)(\[\/PLACES\]|$)/);
     if (placesMatch) {
       placesByDay = {};
+      placesByTimePeriod = {};
       const placesText = placesMatch[1];
       placesText.split('\n').forEach(line => {
-        // Match "Day X:" format
+        // Match "Day X Period:" format (e.g., "Day 1 Morning:", "Day 2 Accommodation:")
+        const timePeriodMatch = line.match(/Day\s*(\d+)\s*(Morning|Afternoon|Evening|Accommodation):\s*(.+)/i);
+        if (timePeriodMatch) {
+          const dayNum = timePeriodMatch[1];
+          const period = timePeriodMatch[2];
+          const places = timePeriodMatch[3].split(',').map(p => p.trim()).filter(p => p);
+          const dayKey = `Day ${dayNum}`;
+          
+          // Add to placesByDay (flat list for map)
+          if (!placesByDay[dayKey]) placesByDay[dayKey] = [];
+          placesByDay[dayKey].push(...places);
+          
+          // Add to placesByTimePeriod (structured for flowchart)
+          if (!placesByTimePeriod[dayKey]) placesByTimePeriod[dayKey] = {};
+          placesByTimePeriod[dayKey][period] = places;
+          return;
+        }
+        // Match simple "Day X:" format (fallback)
         const dayMatch = line.match(/Day\s*(\d+):\s*(.+)/i);
         if (dayMatch) {
           const dayNum = dayMatch[1];
@@ -262,6 +292,7 @@ app.post('/api/chat', async (req, res) => {
       mapAction,
       followUpSuggestions,
       placesByDay,
+      placesByTimePeriod,
       conversationId: convId,
     });
   } catch (error) {
@@ -318,55 +349,6 @@ app.delete('/api/conversations/:id', async (req, res) => {
   }
 });
 
-app.post('/api/places', async (req, res) => {
-  try {
-    const { name, address, lat, lng, place_id } = req.body;
-
-    const { data, error } = await supabase
-      .from('saved_places')
-      .insert({ name, address, lat, lng, place_id })
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(data);
-  } catch (error) {
-    console.error('Error saving place:', error);
-    res.status(500).json({ error: 'Failed to save place' });
-  }
-});
-
-app.get('/api/places', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('saved_places')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    res.json(data);
-  } catch (error) {
-    console.error('Error fetching places:', error);
-    res.status(500).json({ error: 'Failed to fetch places' });
-  }
-});
-
-app.delete('/api/places/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { error } = await supabase
-      .from('saved_places')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting place:', error);
-    res.status(500).json({ error: 'Failed to delete place' });
-  }
-});
-
 app.post('/api/summarize-reviews', async (req, res) => {
   try {
     const { placeName, reviews } = req.body;
@@ -391,8 +373,7 @@ app.post('/api/summarize-reviews', async (req, res) => {
           content: `Summarize these reviews for "${placeName}":\n\n${reviewsText}`,
         },
       ],
-      temperature: 0.5,
-      max_tokens: 200,
+      max_completion_tokens: 200,
     });
 
     const summary = completion.choices[0].message.content;

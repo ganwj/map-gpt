@@ -202,6 +202,7 @@ function App() {
               onMapAction={handleMapAction} 
               selectedPlace={selectedPlace}
               searchHistory={searchHistory}
+              places={placesList}
               onViewPlaces={(query?: string) => {
                 // If a specific query is provided, find and show those places
                 if (query) {
@@ -348,7 +349,7 @@ function App() {
               <div className="p-3 space-y-2">
                 {placesList.map((place, index) => (
                   <button
-                    key={place.id || index}
+                    key={`${place.id}-${index}`}
                     onClick={() => {
                       handlePlaceClick(place);
                       setIsMobilePlacesOpen(false);

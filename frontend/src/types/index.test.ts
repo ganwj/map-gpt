@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_ROUTE_DISTANCE } from './index';
-import type { DirectionResult, DirectionError, MapAction, PlaceData } from './index';
+import { MAX_ROUTE_DISTANCE, INTEREST_OPTIONS, TRAVEL_STYLES, DURATION_OPTIONS } from './index';
+import type { DirectionResult, DirectionError, MapAction, PlaceData, Message, PlanningPreferences, TimePeriodPlaces } from './index';
 
 describe('types', () => {
   describe('MAX_ROUTE_DISTANCE', () => {
@@ -189,6 +189,110 @@ describe('types', () => {
       };
 
       expect(place.location).toBeNull();
+    });
+  });
+
+  describe('Planning Constants', () => {
+    it('should have correct interest options', () => {
+      expect(INTEREST_OPTIONS).toContain('Food');
+      expect(INTEREST_OPTIONS).toContain('Culture');
+      expect(INTEREST_OPTIONS).toContain('Shopping');
+      expect(INTEREST_OPTIONS).toHaveLength(8);
+    });
+
+    it('should have correct travel styles', () => {
+      expect(TRAVEL_STYLES).toContain('Budget');
+      expect(TRAVEL_STYLES).toContain('Mid-range');
+      expect(TRAVEL_STYLES).toContain('Luxury');
+      expect(TRAVEL_STYLES).toHaveLength(3);
+    });
+
+    it('should have correct duration options', () => {
+      expect(DURATION_OPTIONS).toContain('1-2 days');
+      expect(DURATION_OPTIONS).toContain('5-7 days');
+      expect(DURATION_OPTIONS).toHaveLength(5);
+    });
+  });
+
+  describe('Message type', () => {
+    it('should accept minimal message', () => {
+      const message: Message = {
+        id: 'msg-1',
+        role: 'user',
+        content: 'Hello',
+      };
+
+      expect(message.id).toBe('msg-1');
+      expect(message.role).toBe('user');
+    });
+
+    it('should accept assistant message with all fields', () => {
+      const message: Message = {
+        id: 'msg-2',
+        role: 'assistant',
+        content: 'Here are some places',
+        followUpSuggestions: ['More places?', 'Different area?'],
+        placesByDay: { 'Day 1': ['Place A', 'Place B'] },
+        placesByTimePeriod: {
+          'Day 1': {
+            Morning: ['Place A'],
+            Afternoon: ['Place B'],
+          },
+        },
+      };
+
+      expect(message.followUpSuggestions).toHaveLength(2);
+      expect(message.placesByDay?.['Day 1']).toHaveLength(2);
+    });
+
+    it('should accept error message', () => {
+      const message: Message = {
+        id: 'msg-3',
+        role: 'assistant',
+        content: 'Error occurred',
+        isError: true,
+        failedMessage: 'Original message',
+      };
+
+      expect(message.isError).toBe(true);
+      expect(message.failedMessage).toBe('Original message');
+    });
+  });
+
+  describe('PlanningPreferences type', () => {
+    it('should accept planning preferences', () => {
+      const prefs: PlanningPreferences = {
+        duration: '3-4 days',
+        interests: ['Food', 'Culture'],
+        travelStyle: 'Mid-range',
+        attractions: 'Tokyo Tower',
+      };
+
+      expect(prefs.duration).toBe('3-4 days');
+      expect(prefs.interests).toContain('Food');
+    });
+  });
+
+  describe('TimePeriodPlaces type', () => {
+    it('should accept time period places', () => {
+      const periods: TimePeriodPlaces = {
+        Morning: ['Place A', 'Place B'],
+        Afternoon: ['Place C'],
+        Evening: ['Place D'],
+        Accommodation: ['Hotel X'],
+      };
+
+      expect(periods.Morning).toHaveLength(2);
+      expect(periods.Accommodation).toContain('Hotel X');
+    });
+
+    it('should allow partial time periods', () => {
+      const periods: TimePeriodPlaces = {
+        Morning: ['Place A'],
+      };
+
+      expect(periods.Morning).toHaveLength(1);
+      expect(periods.Afternoon).toBeUndefined();
     });
   });
 });

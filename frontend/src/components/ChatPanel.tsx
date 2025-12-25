@@ -1,41 +1,23 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Loader2, MapPin, Trash2, List, CalendarDays } from 'lucide-react';
+import { Send, Loader2, MapPin, Trash2, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { MapAction, SearchHistory, SelectedPlace } from '@/types';
+import type { MapAction, SearchHistory, SelectedPlace, PlaceData, Message, PlanningPreferences, TimePeriodPlaces } from '@/types';
+import { INTEREST_OPTIONS, TRAVEL_STYLES, DURATION_OPTIONS } from '@/types';
 import { API_URL, getRandomSuggestions } from '@/constants';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  map_action?: MapAction | null;
-  followUpSuggestions?: string[];
-  searchQuery?: string;
-  placesByDay?: Record<string, string[]> | null;
-}
+import { ItineraryFlowchart } from './ItineraryFlowchart';
 
 interface ChatPanelProps {
   onMapAction: (action: MapAction) => void;
   selectedPlace?: SelectedPlace | null;
   onViewPlaces?: (query?: string) => void;
   searchHistory?: SearchHistory[];
+  places?: PlaceData[];
 }
 
-interface PlanningPreferences {
-  duration: string;
-  interests: string[];
-  travelStyle: string;
-  attractions: string;
-}
-
-const INTEREST_OPTIONS = ['Food', 'Culture', 'Shopping', 'Nature', 'Nightlife', 'History', 'Adventure', 'Relaxation'];
-const TRAVEL_STYLES = ['Budget', 'Mid-range', 'Luxury'];
-const DURATION_OPTIONS = ['1-2 days', '3-4 days', '5-7 days', '1-2 weeks', '2+ weeks'];
-
-export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPanelProps) {
+export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [] }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +29,10 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
     travelStyle: '',
     attractions: '',
   });
+  const [flowchartData, setFlowchartData] = useState<{
+    day: string;
+    timePeriods: TimePeriodPlaces;
+  } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const initialSuggestions = useMemo(() => getRandomSuggestions(3), []);
   
@@ -118,13 +104,18 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
         map_action: data.mapAction,
         followUpSuggestions: data.followUpSuggestions,
         placesByDay: data.placesByDay,
+        placesByTimePeriod: data.placesByTimePeriod,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
       setConversationId(data.conversationId);
 
-      if (data.mapAction) {
-        onMapAction(data.mapAction);
+      // Auto-trigger multiSearch when placesByDay is present
+      if (data.placesByDay && Object.keys(data.placesByDay).length > 0) {
+        const allPlaces = Object.values(data.placesByDay as Record<string, string[]>).flat();
+        if (allPlaces.length > 0) {
+          onMapAction({ action: 'multiSearch', queries: allPlaces });
+        }
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -134,6 +125,8 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
           id: Date.now().toString() + '-error',
           role: 'assistant',
           content: 'Sorry, I encountered an error. Please try again.',
+          isError: true,
+          failedMessage: userMessage.content,
         },
       ]);
     } finally {
@@ -153,6 +146,16 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
     setConversationId(null);
   };
 
+  const retryMessage = (failedMessage: string) => {
+    // Remove the error message and retry
+    setMessages((prev) => prev.filter((m) => !m.isError));
+    setInput(failedMessage);
+    setTimeout(() => {
+      const submitBtn = document.querySelector('[data-submit-btn]') as HTMLButtonElement;
+      submitBtn?.click();
+    }, 100);
+  };
+
   const formatMessage = (content: string) => {
     const jsonPattern = /\{[\s\S]*?"action"[\s\S]*?\}/g;
     const cleanContent = content.replace(jsonPattern, '').trim();
@@ -163,12 +166,14 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
     // Split by lines first to handle headers
     const lines = text.split('\n');
     return lines.map((line, lineIndex) => {
-      // Check for ### headers
-      if (line.startsWith('### ')) {
+      // Check for markdown headers (# to ####)
+      const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
+      if (headerMatch) {
+        const headerText = headerMatch[2];
         return (
-          <h3 key={lineIndex} className="font-bold text-sm mt-3 mb-1 text-primary">
-            {line.slice(4)}
-          </h3>
+          <div key={lineIndex} className="font-bold text-sm mt-3 mb-1">
+            {headerText}
+          </div>
         );
       }
       // Handle bold text within lines
@@ -192,9 +197,9 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
     });
   };
 
-  const latestFollowUpSuggestions = messages
-    .filter((m) => m.role === 'assistant' && m.followUpSuggestions && m.followUpSuggestions.length > 0)
-    .slice(-1)[0]?.followUpSuggestions || [];
+  // Get follow-up suggestions from the LAST assistant message only (not any previous one)
+  const lastAssistantMessage = messages.filter((m) => m.role === 'assistant').slice(-1)[0];
+  const latestFollowUpSuggestions = lastAssistantMessage?.followUpSuggestions || [];
 
   return (
     <Card className="relative h-full border-0 rounded-none overflow-hidden">
@@ -225,9 +230,9 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
 
       {/* Scrollable Chat Body - positioned between header and footer */}
       <div 
-        className="absolute left-0 right-0 top-14 overflow-y-auto pb-4"
+        className="absolute left-0 right-2 top-14 overflow-y-auto pb-4"
         ref={scrollRef}
-        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '140px' : '70px' }}
+        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '165px' : '82.5px' }}
       >
         <div className="p-4">
           {messages.length === 0 ? (
@@ -363,36 +368,24 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
                     )}
                   >
                     <div className="whitespace-pre-wrap">{renderFormattedText(formatMessage(message.content))}</div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {message.map_action && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => onMapAction(message.map_action!)}
-                        >
-                          <MapPin className="mr-1 h-3 w-3" />
-                          Show on map
-                        </Button>
-                      )}
-                      {message.map_action?.action === 'search' && message.map_action.query && onViewPlaces && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => onViewPlaces(message.map_action?.query)}
-                        >
-                          <List className="mr-1 h-3 w-3" />
-                          View places
-                        </Button>
-                      )}
-                    </div>
+                    {/* Retry button for error messages */}
+                    {message.isError && message.failedMessage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 h-7 text-xs"
+                        onClick={() => retryMessage(message.failedMessage!)}
+                      >
+                        <Send className="mr-1 h-3 w-3" />
+                        Retry
+                      </Button>
+                    )}
                     {/* Places by day for planning mode */}
                     {message.placesByDay && Object.keys(message.placesByDay).length > 0 && (
                       <div className="mt-3 pt-2 border-t border-border/50 space-y-2">
                         <p className="text-xs text-muted-foreground font-medium">View suggested places:</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {Object.entries(message.placesByDay).map(([day, places]) => (
+                          {Object.entries(message.placesByDay).map(([day, dayPlaces]) => (
                             <Button
                               key={day}
                               variant="outline"
@@ -400,12 +393,19 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
                               className="h-6 text-xs px-2"
                               onClick={() => {
                                 // Search for all places at once and show places list
-                                onMapAction({ action: 'multiSearch', queries: places });
+                                onMapAction({ action: 'multiSearch', queries: dayPlaces });
                                 onViewPlaces?.();
+                                // Open flowchart if time period data is available
+                                if (message.placesByTimePeriod?.[day]) {
+                                  setFlowchartData({
+                                    day,
+                                    timePeriods: message.placesByTimePeriod[day],
+                                  });
+                                }
                               }}
                             >
                               <MapPin className="mr-1 h-3 w-3" />
-                              {day} ({places.length})
+                              {day} ({dayPlaces.length})
                             </Button>
                           ))}
                         </div>
@@ -456,7 +456,7 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
               disabled={isLoading}
               className="flex-1 h-9"
             />
-            <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon" className="h-9 w-9">
+            <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon" className="h-9 w-9" data-submit-btn>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -466,6 +466,22 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPane
           </div>
         </div>
       </div>
+      
+      {/* Itinerary Flowchart Modal */}
+      {flowchartData && (
+        <ItineraryFlowchart
+          day={flowchartData.day}
+          timePeriods={flowchartData.timePeriods}
+          places={places}
+          onPlaceClick={(placeName) => {
+            onMapAction({ action: 'search', query: placeName });
+          }}
+          onDirections={(action) => {
+            onMapAction(action);
+          }}
+          onClose={() => setFlowchartData(null)}
+        />
+      )}
     </Card>
   );
 }

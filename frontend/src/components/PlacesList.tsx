@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
-import { Star, MapPin, ChevronRight } from 'lucide-react';
+import { useState, useRef, useCallback, useMemo } from 'react';
+import { Star, MapPin, ChevronRight, ImageOff, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import type { PlaceData } from '@/types';
@@ -20,8 +21,8 @@ function PlaceImage({ place }: { place: PlaceData }) {
 
   if (!photoUrl || error) {
     return (
-      <div className="w-24 h-24 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
-        <MapPin className="h-8 w-8 text-muted-foreground" />
+      <div className="w-24 h-24 rounded-xl bg-muted/50 border border-border flex items-center justify-center flex-shrink-0">
+        <ImageOff className="h-6 w-6 text-muted-foreground/60" />
       </div>
     );
   }
@@ -40,7 +41,28 @@ export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed:
   const [width, setWidth] = useState<number>(PANEL_DIMENSIONS.DEFAULT_WIDTH);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Remove duplicates and filter by search query
+  const filteredPlaces = useMemo(() => {
+    const seen = new Set<string>();
+    const uniquePlaces = places.filter(place => {
+      const key = place.id || place.displayName;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    
+    if (!searchQuery.trim()) return uniquePlaces;
+    
+    const query = searchQuery.toLowerCase();
+    return uniquePlaces.filter(place => 
+      place.displayName.toLowerCase().includes(query) ||
+      place.formattedAddress?.toLowerCase().includes(query) ||
+      place.types?.some(t => t.toLowerCase().includes(query))
+    );
+  }, [places, searchQuery]);
 
   // Use controlled or internal collapsed state
   const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
@@ -107,20 +129,32 @@ export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed:
       {/* Visual indicator line */}
       <div className={`absolute left-0 top-0 bottom-0 w-px bg-border pointer-events-none ${isResizing ? 'bg-primary' : ''}`} />
 
-      <div className="p-4 border-b flex items-center justify-between">
-        <h3 className="font-semibold">Places {places.length > 0 ? `(${places.length})` : ''}</h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setIsCollapsed(true)}
-          title="Collapse places list"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <div className="p-4 border-b space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Places {filteredPlaces.length > 0 ? `(${filteredPlaces.length})` : ''}</h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setIsCollapsed(true)}
+            title="Collapse places list"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search places..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
       </div>
       <ScrollArea className="flex-1">
-        {places.length === 0 ? (
+        {filteredPlaces.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <MapPin className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No places to display</p>
@@ -128,9 +162,9 @@ export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed:
           </div>
         ) : (
           <div className="p-3">
-            {places.map((place, index) => (
+            {filteredPlaces.map((place, index) => (
               <button
-                key={place.id || index}
+                key={`${place.id}-${index}`}
                 onClick={() => onPlaceClick(place)}
                 className={`w-full text-left p-4 rounded-xl mb-3 transition-colors hover:bg-accent border ${
                   selectedPlaceId === place.id ? 'bg-accent border-primary' : 'border-transparent'
