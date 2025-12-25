@@ -2,6 +2,10 @@
 
 An interactive Google Maps application with AI chatbot capabilities. Ask questions about locations, get directions, plan trips, and discover places around the world.
 
+[![Application Image](https://i.postimg.cc/23R6zrH2/Screenshot_2025_12_26_035419.png)](https://postimg.cc/SYdqdFbM)
+
+Try now at https://map-gpt-weld.vercel.app/
+
 ## Features
 
 - **AI-Powered Chat**: Natural language interface to interact with the map
@@ -61,7 +65,7 @@ cd frontend
 npm install
 ```
 
-Create `.env` file and add your Google Maps API key:
+Create `.env` file and add the below variables:
 
 ```env
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
