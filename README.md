@@ -99,7 +99,7 @@ The frontend will run on http://localhost:5173
 3. Use the chat panel to:
    - Search for places: "Show me the Eiffel Tower"
    - Get directions: "Directions from New York to Boston"
-   - Find nearby places: "Find coffee shops near Times Square"
+   - Find nearby places: "Find coffee shops near Kuala Lumpur"
    - Learn about locations: "Tell me about the Colosseum in Rome"
 
 ## Project Structure

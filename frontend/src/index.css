@@ -80,13 +80,13 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.2 0.01 260);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.24 0.01 260);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: oklch(0.24 0.01 260);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --primary: oklch(0.7 0.15 195);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -120,4 +120,220 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Button hover and click effects */
+button, [role="button"] {
+  transition: transform 0.1s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled), [role="button"]:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+.dark button:hover:not(:disabled), .dark [role="button"]:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Google Maps Autocomplete dropdown styling */
+.pac-container {
+  background-color: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: inherit;
+  z-index: 9999;
+}
+
+.pac-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-top: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.pac-item:first-child {
+  border-top: none;
+}
+
+.pac-item:hover {
+  background-color: var(--accent);
+}
+
+.pac-item-query {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.pac-matched {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.pac-icon {
+  display: none;
+}
+
+/* Dark mode - use Google's default light styling for dropdown */
+.dark .pac-container {
+  background-color: #fff;
+  border-color: #dadce0;
+}
+
+.dark .pac-item {
+  color: #202124;
+  border-color: #e8eaed;
+}
+
+.dark .pac-item:hover {
+  background-color: #f1f3f4;
+}
+
+.dark .pac-item-query {
+  color: #202124;
+}
+
+.dark .pac-matched {
+  color: #1a73e8;
+}
+
+/* PlaceAutocompleteElement styling */
+gmp-place-autocomplete {
+  width: 100%;
+  display: block;
+}
+
+gmp-place-autocomplete::part(input) {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  outline: none;
+}
+
+gmp-place-autocomplete::part(input):focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-color: var(--ring);
+}
+
+gmp-place-autocomplete::part(input)::placeholder {
+  color: var(--muted-foreground);
+}
+
+gmp-place-autocomplete::part(predictions) {
+  background-color: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 4px;
+}
+
+gmp-place-autocomplete::part(prediction-item) {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--foreground);
+}
+
+gmp-place-autocomplete::part(prediction-item):hover {
+  background-color: var(--accent);
+}
+
+gmp-place-autocomplete::part(prediction-item-main-text) {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+gmp-place-autocomplete::part(prediction-item-match) {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* PlacesAutocomplete container styling */
+.places-autocomplete-container {
+  min-height: 36px;
+}
+
+.places-autocomplete-container input,
+.places-autocomplete-container gmp-place-autocomplete input {
+  width: 100% !important;
+  height: 36px !important;
+  padding: 0 12px !important;
+  font-size: 14px !important;
+  border-radius: var(--radius) !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+
+.places-autocomplete-container input:focus,
+.places-autocomplete-container gmp-place-autocomplete input:focus {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+  border-color: var(--ring) !important;
+}
+
+.places-autocomplete-container input::placeholder,
+.places-autocomplete-container gmp-place-autocomplete input::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* Dark mode specific for autocomplete inputs - use Google's default light style */
+.dark .places-autocomplete-container input,
+.dark .places-autocomplete-container gmp-place-autocomplete input {
+  background-color: #fff !important;
+  color: #202124 !important;
+  border-color: #dadce0 !important;
+}
+
+.dark .places-autocomplete-container input::placeholder,
+.dark .places-autocomplete-container gmp-place-autocomplete input::placeholder {
+  color: #5f6368 !important;
+}
+
+.dark .places-autocomplete-container input:focus,
+.dark .places-autocomplete-container gmp-place-autocomplete input:focus {
+  outline: 2px solid #1a73e8 !important;
+  border-color: #1a73e8 !important;
+}
+
+/* Dark mode predictions dropdown - Google style */
+.dark gmp-place-autocomplete::part(predictions) {
+  background-color: #fff !important;
+  border-color: #dadce0 !important;
+}
+
+.dark gmp-place-autocomplete::part(prediction-item) {
+  color: #202124 !important;
+}
+
+.dark gmp-place-autocomplete::part(prediction-item):hover {
+  background-color: #f1f3f4 !important;
+}
+
+.dark gmp-place-autocomplete::part(prediction-item-main-text) {
+  color: #202124 !important;
+}
+
+.dark gmp-place-autocomplete::part(prediction-item-match) {
+  color: #1a73e8 !important;
+}
+
+/* Reduce box shadow for autocomplete in panels */
+.place-details-panel .pac-container,
+.place-details-panel gmp-place-autocomplete::part(predictions) {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }

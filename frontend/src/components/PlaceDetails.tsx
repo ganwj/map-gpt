@@ -1,38 +1,44 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Star, Clock, Phone, Globe, MapPin, Navigation, ChevronLeft, ChevronRight, ImageOff, ArrowUpDown, Sparkles, Loader2 } from 'lucide-react';
+import { X, Star, Clock, Phone, Globe, MapPin, Navigation, ChevronLeft, ChevronRight, ImageOff, ArrowUpDown, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { PlaceData } from './GoogleMap';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { PlacesAutocomplete } from '@/components/PlacesAutocomplete';
+import { getCurrentLocation } from '@/lib/geolocation';
+import { getCountryCodeFromAddress } from '@/lib/countryCode';
+import type { PlaceData, Review, DirectionError } from '@/types';
+import { API_URL, PANEL_DIMENSIONS } from '@/constants';
 
 interface PlaceDetailsProps {
   place: PlaceData | null;
   onClose: () => void;
-  onGetDirections?: (place: PlaceData) => void;
+  onGetDirections?: (place: PlaceData, origin: string) => void;
+  directionError?: DirectionError | null;
+  onClearDirectionError?: () => void;
 }
 
 type ReviewSort = 'newest' | 'oldest';
-
-interface Review {
-  authorName: string;
-  rating: number;
-  text: string;
-  relativeTime: string;
-  profilePhotoUrl?: string;
-}
 
 function ReviewCard({ review }: { review: Review }) {
   return (
     <div className="space-y-2 pb-4 border-b last:border-b-0">
       <div className="flex items-center gap-3">
-        {review.profilePhotoUrl && (
+        {review.profilePhotoUrl ? (
           <img
             src={review.profilePhotoUrl}
             alt={review.authorName}
-            className="h-10 w-10 rounded-full"
+            className="h-10 w-10 rounded-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
+        ) : (
+          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+            <span className="text-sm font-medium text-muted-foreground">
+              {review.authorName.charAt(0).toUpperCase()}
+            </span>
+          </div>
         )}
         <div className="flex-1">
           <span className="text-sm font-medium block">{review.authorName}</span>
@@ -64,18 +70,59 @@ function ReviewCard({ review }: { review: Review }) {
   );
 }
 
-const MIN_WIDTH = 280;
-const MAX_WIDTH = 600;
-const DEFAULT_WIDTH = 380;
-
-export function PlaceDetails({ place, onClose, onGetDirections }: PlaceDetailsProps) {
+export function PlaceDetails({ place, onClose, onGetDirections, directionError, onClearDirectionError }: PlaceDetailsProps) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [photoError, setPhotoError] = useState(false);
   const [reviewSort, setReviewSort] = useState<ReviewSort>('newest');
   const [reviewSummary, setReviewSummary] = useState<string | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const [width, setWidth] = useState<number>(PANEL_DIMENSIONS.DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+  const [originInput, setOriginInput] = useState('');
+  const [originError, setOriginError] = useState('');
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+  // Extract country code from place address for autocomplete restriction
+  const countryCode = useMemo(() => {
+    return getCountryCodeFromAddress(place?.formattedAddress);
+  }, [place?.formattedAddress]);
+
+  const handleUseCurrentLocation = async () => {
+    setIsLoadingLocation(true);
+    setOriginError('');
+    try {
+      const result = await getCurrentLocation();
+      setOriginInput(result.address || `${result.latitude}, ${result.longitude}`);
+    } catch (error) {
+      const err = error as { message?: string };
+      setOriginError(err.message || 'Could not get your location');
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
+  const handleGetDirections = async () => {
+    setOriginError('');
+    let finalOrigin = originInput.trim();
+    
+    // If no origin provided, try to get current location
+    if (!finalOrigin) {
+      setIsLoadingLocation(true);
+      try {
+        const result = await getCurrentLocation();
+        finalOrigin = result.address || `${result.latitude}, ${result.longitude}`;
+        setOriginInput(finalOrigin);
+      } catch (error) {
+        const err = error as { message?: string };
+        setOriginError(err.message || 'Could not get your location. Please enter a starting location.');
+        setIsLoadingLocation(false);
+        return;
+      }
+      setIsLoadingLocation(false);
+    }
+    
+    onGetDirections?.(place!, finalOrigin);
+  };
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -86,7 +133,7 @@ export function PlaceDetails({ place, onClose, onGetDirections }: PlaceDetailsPr
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = startX - moveEvent.clientX;
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+      const newWidth = Math.min(PANEL_DIMENSIONS.MAX_WIDTH, Math.max(PANEL_DIMENSIONS.MIN_WIDTH, startWidth + delta));
       setWidth(newWidth);
     };
 
@@ -195,8 +242,8 @@ export function PlaceDetails({ place, onClose, onGetDirections }: PlaceDetailsPr
 
   return (
     <Card 
-      className="hidden sm:flex h-full flex-col border-0 rounded-none border-l overflow-hidden flex-shrink-0 relative"
-      style={{ width: `${width}px` }}
+      className="place-details-panel flex h-full flex-col border-0 rounded-none sm:border-l overflow-hidden flex-shrink-0 relative w-full sm:w-auto"
+      style={{ width: typeof window !== 'undefined' && window.innerWidth >= 640 ? `${width}px` : '100%' }}
     >
       {/* Resize handle - full height, wider hit area */}
       <div
@@ -223,18 +270,18 @@ export function PlaceDetails({ place, onClose, onGetDirections }: PlaceDetailsPr
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white text-gray-900"
                   onClick={prevPhoto}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4 text-gray-900" />
                 </Button>
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white text-gray-900"
                   onClick={nextPhoto}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4 text-gray-900" />
                 </Button>
                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
                   {currentPhotoIndex + 1} / {totalPhotos}
@@ -250,10 +297,10 @@ export function PlaceDetails({ place, onClose, onGetDirections }: PlaceDetailsPr
         <Button
           variant="secondary"
           size="icon"
-          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white z-10"
+          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white z-10 text-gray-900"
           onClick={onClose}
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4 text-gray-900" />
         </Button>
       </div>
 
@@ -329,13 +376,45 @@ export function PlaceDetails({ place, onClose, onGetDirections }: PlaceDetailsPr
           )}
 
           {onGetDirections && (
-            <Button
-              className="w-full"
-              onClick={() => onGetDirections(place)}
-            >
-              <Navigation className="h-4 w-4 mr-2" />
-              Get Directions
-            </Button>
+            <div className="space-y-2">
+              <PlacesAutocomplete
+                value={originInput}
+                onChange={(val) => {
+                  setOriginInput(val);
+                  setOriginError('');
+                }}
+                placeholder="From (starting location)"
+                showLocationButton
+                onUseCurrentLocation={handleUseCurrentLocation}
+                isLoadingLocation={isLoadingLocation}
+                countryRestriction={countryCode}
+              />
+              {originError && (
+                <div className="flex items-center gap-1 text-destructive text-xs">
+                  <AlertCircle className="h-3 w-3" />
+                  {originError}
+                </div>
+              )}
+              {directionError && (
+                <div className="flex items-center gap-1.5 text-destructive text-xs leading-none">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span className="flex-1">{directionError.message}</span>
+                  <button
+                    onClick={onClearDirectionError}
+                    className="text-muted-foreground hover:text-destructive flex items-center justify-center"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              <Button
+                className="w-full"
+                onClick={handleGetDirections}
+              >
+                <Navigation className="h-4 w-4 mr-2" />
+                Get Directions
+              </Button>
+            </div>
           )}
 
           {place.reviews && place.reviews.length > 0 && (

@@ -3,3 +3,11 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+/* Mobile chat panel - override inline width */
+@media (max-width: 767px) {
+  .chat-panel {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+}

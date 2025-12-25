@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Loader2, MapPin, Trash2 } from 'lucide-react';
+import { Send, Loader2, MapPin, Trash2, List, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import type { MapAction, SearchHistory, SelectedPlace } from '@/types';
+import { API_URL, getRandomSuggestions } from '@/constants';
 
 interface Message {
   id: string;
@@ -12,56 +13,57 @@ interface Message {
   content: string;
   map_action?: MapAction | null;
   followUpSuggestions?: string[];
-}
-
-interface MapAction {
-  action: 'search' | 'goto' | 'directions' | 'marker';
-  query?: string;
-  lat?: number;
-  lng?: number;
-  zoom?: number;
-  title?: string;
-  origin?: string;
-  destination?: string;
+  searchQuery?: string;
+  placesByDay?: Record<string, string[]> | null;
 }
 
 interface ChatPanelProps {
   onMapAction: (action: MapAction) => void;
-  selectedPlace?: { name: string; address: string; lat: number; lng: number } | null;
+  selectedPlace?: SelectedPlace | null;
+  onViewPlaces?: (query?: string) => void;
+  searchHistory?: SearchHistory[];
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-const ALL_SUGGESTIONS = [
-  'Show me the Eiffel Tower',
-  'Find coffee shops near Times Square',
-  'Directions from London to Paris',
-  'Best restaurants in Tokyo',
-  'Show me the Colosseum in Rome',
-  'Find hotels near Central Park',
-  'Directions from Sydney to Melbourne',
-  'Popular attractions in Barcelona',
-  'Find museums in Washington DC',
-  'Show me the Great Wall of China',
-  'Best pizza places in New York',
-  'Find beaches near Miami',
-  'Directions from Los Angeles to San Francisco',
-  'Show me Machu Picchu',
-  'Find shopping malls in Dubai',
-];
-
-function getRandomSuggestions(count: number): string[] {
-  const shuffled = [...ALL_SUGGESTIONS].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+interface PlanningPreferences {
+  duration: string;
+  interests: string[];
+  travelStyle: string;
+  attractions: string;
 }
 
-export function ChatPanel({ onMapAction, selectedPlace }: ChatPanelProps) {
+const INTEREST_OPTIONS = ['Food', 'Culture', 'Shopping', 'Nature', 'Nightlife', 'History', 'Adventure', 'Relaxation'];
+const TRAVEL_STYLES = ['Budget', 'Mid-range', 'Luxury'];
+const DURATION_OPTIONS = ['1-2 days', '3-4 days', '5-7 days', '1-2 weeks', '2+ weeks'];
+
+export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isPlanningMode, setIsPlanningMode] = useState(false);
+  const [planningPrefs, setPlanningPrefs] = useState<PlanningPreferences>({
+    duration: '',
+    interests: [],
+    travelStyle: '',
+    attractions: '',
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const initialSuggestions = useMemo(() => getRandomSuggestions(3), []);
+  
+  const toggleInterest = (interest: string) => {
+    setPlanningPrefs(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest]
+    }));
+  };
+  
+  const planningSuggestions = [
+    'Plan a 3-day trip to Paris',
+    'Create an itinerary for Tokyo',
+    'Weekend getaway to Barcelona',
+  ];
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -98,6 +100,8 @@ export function ChatPanel({ onMapAction, selectedPlace }: ChatPanelProps) {
           message: userMessage.content,
           conversationId,
           history: messages.slice(-10),
+          planningMode: isPlanningMode,
+          planningPreferences: isPlanningMode ? planningPrefs : undefined,
         }),
       });
 
@@ -113,6 +117,7 @@ export function ChatPanel({ onMapAction, selectedPlace }: ChatPanelProps) {
         content: data.message,
         map_action: data.mapAction,
         followUpSuggestions: data.followUpSuggestions,
+        placesByDay: data.placesByDay,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -155,16 +160,35 @@ export function ChatPanel({ onMapAction, selectedPlace }: ChatPanelProps) {
   };
 
   const renderFormattedText = (text: string) => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+    // Split by lines first to handle headers
+    const lines = text.split('\n');
+    return lines.map((line, lineIndex) => {
+      // Check for ### headers
+      if (line.startsWith('### ')) {
         return (
-          <strong key={index} className="font-semibold">
-            {part.slice(2, -2)}
-          </strong>
+          <h3 key={lineIndex} className="font-bold text-sm mt-3 mb-1 text-primary">
+            {line.slice(4)}
+          </h3>
         );
       }
-      return part;
+      // Handle bold text within lines
+      const parts = line.split(/(\*\*[^*]+\*\*)/g);
+      const formattedParts = parts.map((part, partIndex) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return (
+            <strong key={partIndex} className="font-semibold">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        return part;
+      });
+      return (
+        <span key={lineIndex}>
+          {formattedParts}
+          {lineIndex < lines.length - 1 && <br />}
+        </span>
+      );
     });
   };
 
@@ -173,116 +197,273 @@ export function ChatPanel({ onMapAction, selectedPlace }: ChatPanelProps) {
     .slice(-1)[0]?.followUpSuggestions || [];
 
   return (
-    <Card className="flex h-full flex-col border-0 rounded-none">
-      <div className="flex items-center justify-between border-b p-4">
+    <Card className="relative h-full border-0 rounded-none overflow-hidden">
+      {/* Header - Fixed at top */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b p-3 bg-background">
         <div className="flex items-center gap-2">
           <MapPin className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">MapGPT</h2>
         </div>
-        {messages.length > 0 && (
-          <Button variant="ghost" size="icon" onClick={clearChat}>
-            <Trash2 className="h-4 w-4" />
+        <div className="flex items-center gap-1">
+          <Button 
+            variant={isPlanningMode ? "default" : "ghost"} 
+            size="sm"
+            onClick={() => setIsPlanningMode(!isPlanningMode)}
+            title={isPlanningMode ? "Exit planning mode" : "Plan a trip"}
+            className="h-8 px-2"
+          >
+            <CalendarDays className="h-4 w-4 mr-1" />
+            <span className="text-xs">{isPlanningMode ? 'Planning' : 'Plan'}</span>
           </Button>
-        )}
+          {messages.length > 0 && (
+            <Button variant="ghost" size="icon" onClick={clearChat} className="h-8 w-8">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <MapPin className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mb-2 text-lg font-medium">Welcome to MapGPT</h3>
-            <p className="text-sm text-muted-foreground max-w-[250px]">
-              Ask me about any location, get directions, or discover places around the world.
-            </p>
-            <div className="mt-6 space-y-2">
-              {initialSuggestions.map((suggestion, idx) => (
-                <SuggestionButton
+      {/* Scrollable Chat Body - positioned between header and footer */}
+      <div 
+        className="absolute left-0 right-0 top-14 overflow-y-auto pb-4"
+        ref={scrollRef}
+        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '140px' : '70px' }}
+      >
+        <div className="p-4">
+          {messages.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center text-center py-8">
+              {isPlanningMode ? (
+                <div className="w-full max-w-sm space-y-4">
+                  <div className="text-center">
+                    <CalendarDays className="mx-auto mb-2 h-10 w-10 text-primary" />
+                    <h3 className="text-lg font-medium">Plan Your Trip</h3>
+                    <p className="text-xs text-muted-foreground">Set your preferences below</p>
+                  </div>
+                  
+                  {/* Duration */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Duration</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {DURATION_OPTIONS.map(d => (
+                        <button
+                          key={d}
+                          onClick={() => setPlanningPrefs(p => ({ ...p, duration: d }))}
+                          className={cn(
+                            "text-xs px-2 py-1 rounded-full border transition-colors",
+                            planningPrefs.duration === d 
+                              ? "bg-primary text-primary-foreground border-primary" 
+                              : "bg-background hover:bg-accent"
+                          )}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Interests */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Interests</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {INTEREST_OPTIONS.map(i => (
+                        <button
+                          key={i}
+                          onClick={() => toggleInterest(i)}
+                          className={cn(
+                            "text-xs px-2 py-1 rounded-full border transition-colors",
+                            planningPrefs.interests.includes(i) 
+                              ? "bg-primary text-primary-foreground border-primary" 
+                              : "bg-background hover:bg-accent"
+                          )}
+                        >
+                          {i}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Travel Style */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Travel Style</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {TRAVEL_STYLES.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => setPlanningPrefs(p => ({ ...p, travelStyle: s }))}
+                          className={cn(
+                            "text-xs px-2 py-1 rounded-full border transition-colors",
+                            planningPrefs.travelStyle === s 
+                              ? "bg-primary text-primary-foreground border-primary" 
+                              : "bg-background hover:bg-accent"
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Specific Attractions */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Must-see places (optional)</label>
+                    <Input
+                      value={planningPrefs.attractions}
+                      onChange={(e) => setPlanningPrefs(p => ({ ...p, attractions: e.target.value }))}
+                      placeholder="e.g., Eiffel Tower, Louvre..."
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+
+                  {/* Quick Suggestions */}
+                  <div className="pt-2 space-y-1.5">
+                    {planningSuggestions.map((suggestion, idx) => (
+                      <SuggestionButton
+                        key={idx}
+                        onClick={() => setInput(suggestion)}
+                        text={suggestion}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <MapPin className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                  <h3 className="mb-2 text-lg font-medium">Welcome to MapGPT</h3>
+                  <p className="text-sm text-muted-foreground max-w-[250px]">
+                    Ask me about any location, get directions, or discover places around the world.
+                  </p>
+                  <div className="mt-6 space-y-2">
+                    {initialSuggestions.map((suggestion, idx) => (
+                      <SuggestionButton
+                        key={idx}
+                        onClick={() => setInput(suggestion)}
+                        text={suggestion}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    'flex',
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'max-w-[85%] rounded-2xl px-4 py-2 text-sm',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    )}
+                  >
+                    <div className="whitespace-pre-wrap">{renderFormattedText(formatMessage(message.content))}</div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {message.map_action && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => onMapAction(message.map_action!)}
+                        >
+                          <MapPin className="mr-1 h-3 w-3" />
+                          Show on map
+                        </Button>
+                      )}
+                      {message.map_action?.action === 'search' && message.map_action.query && onViewPlaces && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => onViewPlaces(message.map_action?.query)}
+                        >
+                          <List className="mr-1 h-3 w-3" />
+                          View places
+                        </Button>
+                      )}
+                    </div>
+                    {/* Places by day for planning mode */}
+                    {message.placesByDay && Object.keys(message.placesByDay).length > 0 && (
+                      <div className="mt-3 pt-2 border-t border-border/50 space-y-2">
+                        <p className="text-xs text-muted-foreground font-medium">View suggested places:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(message.placesByDay).map(([day, places]) => (
+                            <Button
+                              key={day}
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-xs px-2"
+                              onClick={() => {
+                                // Search for all places at once and show places list
+                                onMapAction({ action: 'multiSearch', queries: places });
+                                onViewPlaces?.();
+                              }}
+                            >
+                              <MapPin className="mr-1 h-3 w-3" />
+                              {day} ({places.length})
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl bg-muted px-4 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Fixed Area - Suggestions + Input */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-background">
+        {/* Follow-up Suggestions */}
+        {latestFollowUpSuggestions.length > 0 && (
+          <div className="px-3 py-2 bg-muted/30 border-t">
+            <div className="flex flex-wrap gap-1.5">
+              {latestFollowUpSuggestions.map((suggestion, idx) => (
+                <button
                   key={idx}
                   onClick={() => setInput(suggestion)}
-                  text={suggestion}
-                />
+                  className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-accent transition-colors text-left"
+                >
+                  {suggestion}
+                </button>
               ))}
             </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  'flex',
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                )}
-              >
-                <div
-                  className={cn(
-                    'max-w-[85%] rounded-2xl px-4 py-2 text-sm',
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  )}
-                >
-                  <p className="whitespace-pre-wrap">{renderFormattedText(formatMessage(message.content))}</p>
-                  {message.map_action && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="mt-2 h-7 text-xs"
-                      onClick={() => onMapAction(message.map_action!)}
-                    >
-                      <MapPin className="mr-1 h-3 w-3" />
-                      Show on map
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl bg-muted px-4 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              </div>
-            )}
-          </div>
         )}
-      </ScrollArea>
 
-      {latestFollowUpSuggestions.length > 0 && (
-        <div className="border-t px-4 py-3">
-          <div className="flex flex-wrap gap-2">
-            {latestFollowUpSuggestions.map((suggestion, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setInput(suggestion);
-                }}
-                className="text-xs px-3 py-1.5 rounded-full border bg-background hover:bg-accent transition-colors text-left"
-              >
-                {suggestion}
-              </button>
-            ))}
+        {/* Input Area */}
+        <div className="border-t p-3">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about any place..."
+              disabled={isLoading}
+              className="flex-1 h-9"
+            />
+            <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon" className="h-9 w-9">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
           </div>
-        </div>
-      )}
-
-      <div className="border-t p-4">
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about any place..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon">
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
         </div>
       </div>
     </Card>
