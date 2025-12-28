@@ -242,18 +242,18 @@ export function PlaceDetails({ place, onClose, onGetDirections, directionError, 
 
   return (
     <Card 
-      className="place-details-panel flex h-full flex-col border-0 rounded-none sm:border-l overflow-hidden flex-shrink-0 relative w-full sm:w-auto"
-      style={{ width: typeof window !== 'undefined' && window.innerWidth >= 640 ? `${width}px` : '100%' }}
+      className="place-details-panel flex h-full flex-col border-0 rounded-none md:border-l overflow-hidden flex-shrink-0 relative w-full md:w-auto"
+      style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${width}px` : '100%' }}
     >
-      {/* Resize handle - full height, wider hit area */}
+      {/* Resize handle - full height, wider hit area - Desktop only */}
       <div
-        className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/20 transition-colors z-10 ${
+        className={`hidden md:block absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/20 transition-colors z-10 ${
           isResizing ? 'bg-primary/30' : ''
         }`}
         onMouseDown={startResize}
       />
-      {/* Visual indicator line */}
-      <div className={`absolute left-0 top-0 bottom-0 w-px bg-border pointer-events-none ${isResizing ? 'bg-primary' : ''}`} />
+      {/* Visual indicator line - Desktop only */}
+      <div className={`hidden md:block absolute left-0 top-0 bottom-0 w-px bg-border pointer-events-none ${isResizing ? 'bg-primary' : ''}`} />
 
       {/* Photo Carousel */}
       <div className="relative flex-shrink-0">
@@ -297,7 +297,7 @@ export function PlaceDetails({ place, onClose, onGetDirections, directionError, 
         <Button
           variant="secondary"
           size="icon"
-          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white z-10 text-gray-900"
+          className="hidden md:flex absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white z-10 text-gray-900"
           onClick={onClose}
         >
           <X className="h-4 w-4 text-gray-900" />

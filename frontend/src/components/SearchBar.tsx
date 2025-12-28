@@ -4,15 +4,18 @@ import { Button } from '@/components/ui/button';
 import { PlacesAutocomplete } from '@/components/PlacesAutocomplete';
 import { getCurrentLocation } from '@/lib/geolocation';
 import type { DirectionError } from '@/types';
+import Logo from '@/assets/logo.svg';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
   onGetDirections: (origin: string, destination: string) => void;
   directionError?: DirectionError | null;
   onClearDirectionError?: () => void;
+  directionsSuccess?: boolean;
+  onDirectionsSuccessHandled?: () => void;
 }
 
-export function SearchBar({ onSearch, onGetDirections, directionError, onClearDirectionError }: SearchBarProps) {
+export function SearchBar({ onSearch, onGetDirections, directionError, onClearDirectionError, directionsSuccess, onDirectionsSuccessHandled }: SearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDirections, setShowDirections] = useState(false);
   const [origin, setOrigin] = useState('');
@@ -27,6 +30,16 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
       onClearDirectionError();
     }
   }, [showDirections, onClearDirectionError]);
+
+  // Close directions form on success
+  useEffect(() => {
+    if (directionsSuccess && showDirections) {
+      setShowDirections(false);
+      setOrigin('');
+      setDestination('');
+      onDirectionsSuccessHandled?.();
+    }
+  }, [directionsSuccess, showDirections, onDirectionsSuccessHandled]);
 
   const handleUseCurrentLocationForOrigin = async () => {
     setIsLoadingLocation(true);
@@ -78,9 +91,8 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
     }
 
     onGetDirections(finalOrigin, destination.trim());
-    setShowDirections(false);
-    setOrigin('');
-    setDestination('');
+    // Don't auto-close - let user see if there's an error
+    // Will close manually when user clicks X or on success
   };
 
   return (
@@ -88,8 +100,10 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
       <div className="flex items-center gap-2">
         {!showDirections ? (
           <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+            <div className="relative flex-1 min-w-0">
+              {/* Logo on mobile, search icon on desktop */}
+              <img src={Logo} alt="" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-5 w-5 z-10 sm:hidden" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 hidden sm:block" />
               <PlacesAutocomplete
                 value={searchQuery}
                 onChange={setSearchQuery}
@@ -97,23 +111,25 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
                 className="[&_input]:pl-9"
               />
             </div>
-            <Button type="submit" size="sm" disabled={!searchQuery.trim()}>
+            <Button type="submit" size="sm" disabled={!searchQuery.trim()} className="hidden md:inline-flex">
               Search
             </Button>
+            {/* Desktop only - directions button */}
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setShowDirections(true)}
               title="Get directions"
+              className="hidden md:flex"
             >
               <Navigation className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Directions</span>
+              Directions
             </Button>
           </form>
         ) : (
           <form onSubmit={handleDirections} className="flex items-center gap-2 flex-1">
-            <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-start gap-2 max-w-2xl">
+            <div className="flex-1 flex items-start gap-2 max-w-2xl">
               <div className="flex-1">
                 <PlacesAutocomplete
                   value={origin}
@@ -127,7 +143,7 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
                   isLoadingLocation={isLoadingLocation}
                 />
               </div>
-              <span className="text-muted-foreground hidden sm:block sm:mt-2">→</span>
+              <span className="text-muted-foreground mt-2">→</span>
               <div className="flex-1">
                 <PlacesAutocomplete
                   value={destination}
@@ -140,8 +156,8 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
               </div>
             </div>
             <Button type="submit" size="sm">
-              <Navigation className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Go</span>
+              <Navigation className="h-4 w-4 mr-1" />
+              Go
             </Button>
             <Button
               type="button"
@@ -162,17 +178,17 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
         )}
       </div>
 
-      {/* Error Messages - Simple inline */}
+      {/* Error Messages - Desktop only (mobile uses directions sheet) */}
       {(originError || destinationError || directionError) && (
-        <div className="flex items-center gap-1.5 text-destructive text-xs leading-none">
+        <div className="hidden md:flex items-center gap-1.5 text-destructive text-xs leading-none mt-1">
           <AlertCircle className="h-3 w-3 shrink-0" />
-          <span className="flex-1">
+          <span>
             {originError || destinationError || directionError?.message}
           </span>
           {directionError && (
             <button
               onClick={onClearDirectionError}
-              className="text-muted-foreground hover:text-destructive flex items-center justify-center"
+              className="text-muted-foreground hover:text-destructive flex items-center justify-center ml-1"
             >
               <X className="h-3 w-3" />
             </button>

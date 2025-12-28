@@ -107,7 +107,7 @@ describe('ItineraryFlowchart', () => {
     }
   });
 
-  it('should call onPlaceClick when a place is clicked', () => {
+  it('should call onPlaceClick and onClose when a place is clicked', () => {
     render(
       <ItineraryFlowchart
         day="Day 1"
@@ -124,9 +124,10 @@ describe('ItineraryFlowchart', () => {
     fireEvent.click(placeButton);
 
     expect(mockOnPlaceClick).toHaveBeenCalledWith('Senso-ji Temple Tokyo Japan');
+    expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it('should call onDirections when directions button is clicked', () => {
+  it('should call onDirections and onClose when directions button is clicked', () => {
     render(
       <ItineraryFlowchart
         day="Day 1"
@@ -147,6 +148,7 @@ describe('ItineraryFlowchart', () => {
       origin: 'Senso-ji Temple Tokyo Japan',
       destination: 'Nakamise Street Tokyo Japan',
     });
+    expect(mockOnClose).toHaveBeenCalled();
   });
 
   it('should toggle time period expansion when header is clicked', () => {

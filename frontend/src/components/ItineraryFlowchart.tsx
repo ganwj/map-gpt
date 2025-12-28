@@ -50,13 +50,13 @@ export function ItineraryFlowchart({ day, timePeriods, places, onPlaceClick, onD
   const orderedPeriods: TimePeriodKey[] = ['Morning', 'Afternoon', 'Evening', 'Accommodation'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative w-full max-w-md mx-4 bg-background rounded-2xl shadow-2xl border overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="relative w-full md:max-w-md md:mx-4 bg-background md:rounded-2xl rounded-t-2xl shadow-2xl border overflow-hidden max-h-[85vh] md:max-h-[80vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+        <div className="flex items-center justify-between p-3 md:p-4 border-b bg-muted/30">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-lg">{day}</h2>
+            <h2 className="font-semibold text-base md:text-lg">{day}</h2>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
@@ -64,7 +64,7 @@ export function ItineraryFlowchart({ day, timePeriods, places, onPlaceClick, onD
         </div>
 
         {/* Flowchart Content */}
-        <ScrollArea className="h-[60vh] max-h-[500px]">
+        <ScrollArea className="h-[calc(85vh-120px)] md:h-[60vh] md:max-h-[500px]">
           <div className="p-4 space-y-2">
             {orderedPeriods.map((period, periodIndex) => {
               const periodPlaces = timePeriods[period];
@@ -127,7 +127,10 @@ export function ItineraryFlowchart({ day, timePeriods, places, onPlaceClick, onD
 
                               {/* Place Card */}
                               <button
-                                onClick={() => onPlaceClick(placeName)}
+                                onClick={() => {
+                                  onPlaceClick(placeName);
+                                  onClose();
+                                }}
                                 className="flex-1 text-left p-3 rounded-lg border bg-background hover:bg-accent transition-colors group"
                               >
                                 <p className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-1">
@@ -163,6 +166,7 @@ export function ItineraryFlowchart({ day, timePeriods, places, onPlaceClick, onD
                                       origin: placeName,
                                       destination: nextPlace,
                                     });
+                                    onClose();
                                   }}
                                   className="flex items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary hover:bg-accent rounded-md transition-colors"
                                 >
@@ -190,9 +194,9 @@ export function ItineraryFlowchart({ day, timePeriods, places, onPlaceClick, onD
         </ScrollArea>
 
         {/* Footer */}
-        <div className="p-3 border-t bg-muted/30">
+        <div className="p-2 md:p-3 border-t bg-muted/30">
           <p className="text-xs text-center text-muted-foreground">
-            Click on a place to view details on the map
+            Tap a place to view details on the map
           </p>
         </div>
       </div>

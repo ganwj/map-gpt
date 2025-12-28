@@ -15,9 +15,10 @@ interface ChatPanelProps {
   onViewPlaces?: (query?: string) => void;
   searchHistory?: SearchHistory[];
   places?: PlaceData[];
+  onClose?: () => void;
 }
 
-export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [] }: ChatPanelProps) {
+export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces: _onViewPlaces, places = [], onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -230,9 +231,9 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
 
       {/* Scrollable Chat Body - positioned between header and footer */}
       <div 
-        className="absolute left-0 right-2 top-14 overflow-y-auto pb-4"
+        className="absolute left-0 right-2 top-14 overflow-y-auto pb-6"
         ref={scrollRef}
-        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '165px' : '82.5px' }}
+        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '200px' : '100px' }}
       >
         <div className="p-4">
           {messages.length === 0 ? (
@@ -392,10 +393,9 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
                               size="sm"
                               className="h-6 text-xs px-2"
                               onClick={() => {
-                                // Search for all places at once and show places list
+                                // Search for all places at once
                                 onMapAction({ action: 'multiSearch', queries: dayPlaces });
-                                onViewPlaces?.();
-                                // Open flowchart if time period data is available
+                                // Open flowchart if time period data is available (don't open places list)
                                 if (message.placesByTimePeriod?.[day]) {
                                   setFlowchartData({
                                     day,
@@ -446,7 +446,7 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
         )}
 
         {/* Input Area */}
-        <div className="border-t p-3">
+        <div className="border-t p-3 pb-safe">
           <div className="flex gap-2">
             <Input
               value={input}
@@ -454,9 +454,9 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
               onKeyDown={handleKeyDown}
               placeholder="Ask about any place..."
               disabled={isLoading}
-              className="flex-1 h-9"
+              className="flex-1 h-10 sm:h-9 text-base sm:text-sm"
             />
-            <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon" className="h-9 w-9" data-submit-btn>
+            <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="icon" className="h-10 w-10 sm:h-9 sm:w-9" data-submit-btn>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -475,9 +475,13 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
           places={places}
           onPlaceClick={(placeName) => {
             onMapAction({ action: 'search', query: placeName });
+            // Close chat panel on mobile
+            if (window.innerWidth < 768) onClose?.();
           }}
           onDirections={(action) => {
             onMapAction(action);
+            // Close chat panel on mobile
+            if (window.innerWidth < 768) onClose?.();
           }}
           onClose={() => setFlowchartData(null)}
         />

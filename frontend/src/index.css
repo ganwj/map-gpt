@@ -366,3 +366,67 @@ gmp-place-autocomplete::part(prediction-item-match) {
 .place-details-panel gmp-place-autocomplete::part(predictions) {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
+
+/* Mobile-specific styles */
+@media (max-width: 767px) {
+  /* Disable hover transform effects on mobile for better touch experience */
+  button:hover:not(:disabled), [role="button"]:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  /* Smoother scrolling */
+  .overflow-y-auto, .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Hide scrollbars on mobile */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+  
+  /* Prevent text selection on interactive elements */
+  button, [role="button"], .select-none {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Safe area padding for notched devices */
+  .pb-safe {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Touch-friendly active states */
+@media (hover: none) and (pointer: coarse) {
+  button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+}
+
+/* Bottom sheet animation */
+.translate-y-full {
+  transform: translateY(100%);
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Safe area for bottom navigation */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Mobile bottom navigation styles */
+@media (max-width: 767px) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
