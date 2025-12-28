@@ -402,6 +402,8 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces: _onViewPla
                                     timePeriods: message.placesByTimePeriod[day],
                                   });
                                 }
+                                // Close chat panel on mobile
+                                if (window.innerWidth < 768) onClose?.();
                               }}
                             >
                               <MapPin className="mr-1 h-3 w-3" />

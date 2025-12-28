@@ -56,18 +56,13 @@ function App() {
         lat: place.location.lat,
         lng: place.location.lng,
       });
-      // On mobile, show places panel with details when marker is clicked
-      if (window.innerWidth < 768) {
-        setSelectedPlaceDetails(place);
-        setIsMobilePlacesOpen(true);
-        setIsChatOpen(false);
-        setIsMobileDirectionsOpen(false);
-      }
     }
   }, []);
 
   const handlePlacesFound = useCallback((places: PlaceData[], query?: string) => {
     setPlacesList(places);
+    // Clear selected place details when new places are found
+    setSelectedPlaceDetails(null);
     if (places.length > 0) {
       setIsPlacesListCollapsed(false);
       // Store in search history
@@ -88,6 +83,12 @@ function App() {
   const handlePlaceDetailsLoaded = useCallback((place: PlaceData) => {
     setSelectedPlaceDetails(place);
     setPlaceIdToFetch(null);
+    // On mobile, show places panel with details when marker is clicked
+    if (window.innerWidth < 768) {
+      setIsMobilePlacesOpen(true);
+      setIsChatOpen(false);
+      setIsMobileDirectionsOpen(false);
+    }
   }, []);
 
   const handlePlaceClick = useCallback((place: PlaceData) => {
