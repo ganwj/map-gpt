@@ -66,18 +66,30 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
   useEffect(() => {
     if (!isLoaded || !mapRef.current || map) return;
 
+    // Use higher minZoom on mobile to prevent map from being too zoomed out
+    const isMobile = window.innerWidth < 768;
+    
     const newMap = new google.maps.Map(mapRef.current, {
       center: MAP_DEFAULTS.CENTER,
       zoom: MAP_DEFAULTS.ZOOM,
-      mapTypeControl: true,
-      streetViewControl: true,
+      mapTypeControl: !isMobile,
+      streetViewControl: !isMobile,
       fullscreenControl: true,
       zoomControl: true,
       gestureHandling: 'greedy',
       mapId: '8d1d947eb36d2fce02b18b5e',
       tilt: 0,
       maxZoom: 21,
-      minZoom: 2,
+      minZoom: isMobile ? 3 : 2,
+      restriction: isMobile ? {
+        latLngBounds: {
+          north: 85,
+          south: -85,
+          west: -180,
+          east: 180,
+        },
+        strictBounds: true,
+      } : undefined,
     });
 
     setMap(newMap);

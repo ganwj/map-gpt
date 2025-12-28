@@ -18,7 +18,7 @@ interface ChatPanelProps {
   onClose?: () => void;
 }
 
-export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces: _onViewPlaces, places = [], onClose }: ChatPanelProps) {
+export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [], onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -402,8 +402,11 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces: _onViewPla
                                     timePeriods: message.placesByTimePeriod[day],
                                   });
                                 }
-                                // Close chat panel on mobile
-                                if (window.innerWidth < 768) onClose?.();
+                                // On mobile, show places list and close chat
+                                if (window.innerWidth < 768) {
+                                  onViewPlaces?.();
+                                  onClose?.();
+                                }
                               }}
                             >
                               <MapPin className="mr-1 h-3 w-3" />
