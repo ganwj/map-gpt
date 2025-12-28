@@ -56,6 +56,13 @@ function App() {
         lat: place.location.lat,
         lng: place.location.lng,
       });
+      // On mobile, show places panel with details when marker is clicked
+      if (window.innerWidth < 768) {
+        setSelectedPlaceDetails(place);
+        setIsMobilePlacesOpen(true);
+        setIsChatOpen(false);
+        setIsMobileDirectionsOpen(false);
+      }
     }
   }, []);
 
@@ -446,7 +453,7 @@ function App() {
           className={`md:hidden fixed inset-x-0 bottom-16 z-50 bg-background rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out ${
             isMobilePlacesOpen ? 'translate-y-0' : 'translate-y-[calc(100%+64px)]'
           }`}
-          style={{ height: 'calc(75vh - 64px)', maxHeight: 'calc(100vh - 130px)' }}
+          style={{ height: 'calc(90vh - 64px)', maxHeight: 'calc(100vh - 100px)' }}
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-2 pb-1">
