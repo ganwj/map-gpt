@@ -119,8 +119,8 @@ describe('ItineraryFlowchart', () => {
       />
     );
 
-    // Find and click the first place (Senso-ji Temple) - displayed without last 2 words
-    const placeButton = screen.getByText('Senso-ji Temple');
+    // Find and click the first place - now displays full name
+    const placeButton = screen.getByText('Senso-ji Temple Tokyo Japan');
     fireEvent.click(placeButton);
 
     expect(mockOnPlaceClick).toHaveBeenCalledWith('Senso-ji Temple Tokyo Japan');
@@ -164,7 +164,7 @@ describe('ItineraryFlowchart', () => {
     );
 
     // Initially expanded - places should be visible
-    expect(screen.getByText('Senso-ji Temple')).toBeInTheDocument();
+    expect(screen.getByText('Senso-ji Temple Tokyo Japan')).toBeInTheDocument();
 
     // Click to collapse Morning section
     const morningHeader = screen.getByText('Morning').closest('button');
@@ -208,8 +208,8 @@ describe('ItineraryFlowchart', () => {
       />
     );
 
-    // Place names should be displayed (without last 2 words)
-    expect(screen.getByText('Senso-ji Temple')).toBeInTheDocument();
-    expect(screen.getByText('Nakamise Street')).toBeInTheDocument();
+    // Place names should be displayed (full name with ** parsing)
+    expect(screen.getByText('Senso-ji Temple Tokyo Japan')).toBeInTheDocument();
+    expect(screen.getByText('Nakamise Street Tokyo Japan')).toBeInTheDocument();
   });
 });
