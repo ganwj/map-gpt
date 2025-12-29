@@ -122,6 +122,10 @@ export function PlaceDetails({ place, onClose, onGetDirections, directionError, 
     }
     
     onGetDirections?.(place!, finalOrigin);
+    // Close place details on mobile after requesting directions
+    if (window.innerWidth < 768) {
+      onClose();
+    }
   };
 
   const startResize = (e: React.MouseEvent) => {

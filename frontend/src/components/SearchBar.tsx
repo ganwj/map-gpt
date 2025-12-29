@@ -99,7 +99,7 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         {!showDirections ? (
-          <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1">
+          <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 md:max-w-xl">
             <div className="relative flex-1 min-w-0">
               {/* Logo on mobile, search icon on desktop */}
               <img src={Logo} alt="" className="absolute left-2.5 top-1/2 -translate-y-1/2 h-5 w-5 z-10 sm:hidden" />
@@ -109,6 +109,11 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
                 onChange={setSearchQuery}
                 placeholder="Search for a place..."
                 className="[&_input]:pl-9"
+                onAutoSearch={(query) => {
+                  if (window.innerWidth < 768 && query.trim()) {
+                    onSearch(query.trim());
+                  }
+                }}
               />
             </div>
             <Button type="submit" size="sm" disabled={!searchQuery.trim()} className="hidden md:inline-flex">

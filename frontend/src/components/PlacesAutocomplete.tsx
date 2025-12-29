@@ -7,6 +7,7 @@ interface PlacesAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onPlaceSelect?: (place: google.maps.places.PlaceResult) => void;
+  onAutoSearch?: (query: string) => void;
   placeholder?: string;
   className?: string;
   showLocationButton?: boolean;
@@ -20,6 +21,7 @@ export function PlacesAutocomplete({
   value,
   onChange,
   onPlaceSelect,
+  onAutoSearch,
   placeholder = 'Search for a place...',
   className,
   showLocationButton = false,
@@ -32,12 +34,14 @@ export function PlacesAutocomplete({
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const onChangeRef = useRef(onChange);
   const onPlaceSelectRef = useRef(onPlaceSelect);
+  const onAutoSearchRef = useRef(onAutoSearch);
 
   // Keep refs in sync
   useEffect(() => {
     onChangeRef.current = onChange;
     onPlaceSelectRef.current = onPlaceSelect;
-  }, [onChange, onPlaceSelect]);
+    onAutoSearchRef.current = onAutoSearch;
+  }, [onChange, onPlaceSelect, onAutoSearch]);
 
   // Initialize Google Places Autocomplete
   useEffect(() => {
@@ -58,6 +62,10 @@ export function PlacesAutocomplete({
         const address = place.formatted_address || place.name || '';
         onChangeRef.current(address);
         onPlaceSelectRef.current?.(place);
+        // Auto-search on mobile when selecting from autocomplete
+        if (onAutoSearchRef.current && address) {
+          onAutoSearchRef.current(address);
+        }
       }
     });
 
@@ -93,6 +101,10 @@ export function PlacesAutocomplete({
             const address = place.formatted_address || place.name || '';
             onChangeRef.current(address);
             onPlaceSelectRef.current?.(place);
+            // Auto-search on mobile when selecting from autocomplete
+            if (onAutoSearchRef.current && address) {
+              onAutoSearchRef.current(address);
+            }
           }
         });
 

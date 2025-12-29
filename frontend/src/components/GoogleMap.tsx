@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { Locate, Loader2 } from 'lucide-react';
 import type { MapAction, PlaceData, DirectionResult, DirectionError } from '@/types';
 import { MAX_ROUTE_DISTANCE } from '@/types';
 import { MAP_DEFAULTS } from '@/constants';
+import { getCurrentLocation } from '@/lib/geolocation';
+import { Button } from '@/components/ui/button';
 
 interface GoogleMapProps {
   apiKey: string;
@@ -20,6 +23,8 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
   const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const currentLocationMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   
   // Use refs for callbacks to avoid dependency array size changes
   const onPlaceDetailsLoadedRef = useRef(onPlaceDetailsLoaded);
@@ -76,6 +81,12 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
       streetViewControl: !isMobile,
       fullscreenControl: true,
       zoomControl: true,
+      zoomControlOptions: isMobile ? {
+        position: google.maps.ControlPosition.RIGHT_CENTER,
+      } : undefined,
+      fullscreenControlOptions: isMobile ? {
+        position: google.maps.ControlPosition.RIGHT_TOP,
+      } : undefined,
       gestureHandling: 'greedy',
       mapId: '8d1d947eb36d2fce02b18b5e',
       tilt: 0,
@@ -760,7 +771,72 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
     );
   }
 
+  const handleLocateMe = async () => {
+    if (!map || !isLoaded) return;
+    
+    setIsLocating(true);
+    try {
+      const location = await getCurrentLocation();
+      const position = { lat: location.latitude, lng: location.longitude };
+      
+      // Remove previous current location marker
+      if (currentLocationMarkerRef.current) {
+        currentLocationMarkerRef.current.map = null;
+        currentLocationMarkerRef.current = null;
+      }
+      
+      // Center map on current location
+      map.setCenter(position);
+      map.setZoom(15);
+      
+      // Add a blue dot marker for current location
+      const { AdvancedMarkerElement } = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary;
+      
+      const markerContent = document.createElement('div');
+      markerContent.innerHTML = `
+        <div style="
+          width: 20px;
+          height: 20px;
+          background: #4285F4;
+          border: 3px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        "></div>
+      `;
+      
+      const marker = new AdvancedMarkerElement({
+        position,
+        map,
+        title: 'Your Location',
+        content: markerContent,
+      });
+      
+      currentLocationMarkerRef.current = marker;
+    } catch (error) {
+      console.error('Error getting location:', error);
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
   return (
-    <div ref={mapRef} className="h-full w-full" />
+    <div className="relative h-full w-full">
+      <div ref={mapRef} className="h-full w-full" />
+      {/* Current Location Button */}
+      <Button
+        variant="secondary"
+        size="icon"
+        className="absolute left-4 md:left-auto md:right-24 bottom-20 md:top-4 z-10 shadow-lg bg-background hover:bg-accent"
+        onClick={handleLocateMe}
+        disabled={isLocating || !isLoaded}
+        title="Go to my location"
+      >
+        {isLocating ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Locate className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
   );
 }

@@ -115,6 +115,10 @@ function App() {
       destination: place.formattedAddress || place.displayName || '',
       _timestamp: Date.now(),
     });
+    // Close mobile places panel when getting directions
+    if (window.innerWidth < 768) {
+      setIsMobilePlacesOpen(false);
+    }
   }, []);
 
   const handleCloseDetails = useCallback(() => {
@@ -184,7 +188,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       {/* Top Header with Search Bar and Theme Toggle */}
-      <header className="flex items-center gap-4 px-2 sm:px-4 py-2 sm:py-3 border-b bg-background z-40 shrink-0">
+      <header className="flex items-center gap-4 px-2 sm:px-4 py-2 sm:py-3 border-b bg-background z-40 shrink-0 sticky top-0">
         <div className="hidden sm:flex items-center gap-2 shrink-0">
           <img src={Logo} alt="MapGPT" className="h-8 w-8" />
           <h1 className="font-semibold text-lg hidden mr-2 md:block">MapGPT</h1>
@@ -419,7 +423,7 @@ function App() {
           {/* Desktop Chat Toggle Button */}
           {!isChatOpen && (
             <Button
-              className="hidden md:flex fixed bottom-6 left-6 h-14 w-14 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-transform"
+              className="hidden md:flex fixed bottom-6 left-8 h-14 w-14 rounded-full shadow-lg hover:scale-105 active:scale-95 transition-transform"
               onClick={() => setIsChatOpen(true)}
               title="Open chat"
             >

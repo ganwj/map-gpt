@@ -173,4 +173,18 @@ describe('PlacesAutocomplete', () => {
 
     expect(container.firstChild).toHaveClass('custom-class');
   });
+
+  it('should accept onAutoSearch prop', () => {
+    const onChange = vi.fn();
+    const onAutoSearch = vi.fn();
+    render(
+      <PlacesAutocomplete
+        value=""
+        onChange={onChange}
+        onAutoSearch={onAutoSearch}
+      />
+    );
+
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
 });
