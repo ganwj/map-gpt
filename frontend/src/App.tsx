@@ -354,9 +354,12 @@ function App() {
 
           {/* Direction Results Panel */}
           {directionResult && (
-            <div className="absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 md:p-4 z-20 max-w-md w-[90%] sm:w-auto">
-              <div className="flex items-baseline justify-between mb-2 md:mb-3">
-                <h3 className="font-semibold text-xs md:text-sm">Travel Times</h3>
+            <div className="fixed md:absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 md:p-4 z-20 max-w-md w-[90%] sm:w-auto">
+              <div className="flex items-baseline justify-between mb-1 md:mb-2">
+                <div>
+                  <h3 className="font-semibold text-xs md:text-sm">Travel Times</h3>
+                  <p className="text-[10px] text-muted-foreground">Estimates only · Tap for live directions</p>
+                </div>
                 <button
                   onClick={() => setDirectionResult(null)}
                   className="text-muted-foreground hover:text-foreground text-base md:text-lg leading-none"
