@@ -16,9 +16,10 @@ interface ChatPanelProps {
   searchHistory?: SearchHistory[];
   places?: PlaceData[];
   onClose?: () => void;
+  onShowFlowchart?: (data: { day: string; timePeriods: TimePeriodPlaces } | null) => void;
 }
 
-export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [], onClose }: ChatPanelProps) {
+export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [], onClose, onShowFlowchart }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,11 +31,15 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
     travelStyle: '',
     attractions: '',
   });
-  const [flowchartData, setFlowchartData] = useState<{
+  const [localFlowchartData, setLocalFlowchartData] = useState<{
     day: string;
     timePeriods: TimePeriodPlaces;
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Use external flowchart handler if provided, otherwise use local state
+  const setFlowchartData = onShowFlowchart || setLocalFlowchartData;
+  const flowchartData = onShowFlowchart ? null : localFlowchartData;
   const initialSuggestions = useMemo(() => getRandomSuggestions(3), []);
   
   const toggleInterest = (interest: string) => {
@@ -233,7 +238,7 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
       <div 
         className="absolute left-0 right-2 top-14 overflow-y-auto pb-6"
         ref={scrollRef}
-        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '200px' : '100px' }}
+        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '150px' : '100px' }}
       >
         <div className="p-4">
           {messages.length === 0 ? (
@@ -395,17 +400,22 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
                               onClick={() => {
                                 // Search for all places at once
                                 onMapAction({ action: 'multiSearch', queries: dayPlaces });
-                                // Open flowchart if time period data is available (don't open places list)
+                                // Open flowchart if time period data is available
                                 if (message.placesByTimePeriod?.[day]) {
                                   setFlowchartData({
                                     day,
                                     timePeriods: message.placesByTimePeriod[day],
                                   });
-                                }
-                                // On mobile, show places list and close chat
-                                if (window.innerWidth < 768) {
-                                  onViewPlaces?.();
-                                  onClose?.();
+                                  // On mobile, close chat to show the itinerary flowchart
+                                  if (window.innerWidth < 768) {
+                                    onClose?.();
+                                  }
+                                } else {
+                                  // On mobile without flowchart data, show places list
+                                  if (window.innerWidth < 768) {
+                                    onViewPlaces?.();
+                                    onClose?.();
+                                  }
                                 }
                               }}
                             >

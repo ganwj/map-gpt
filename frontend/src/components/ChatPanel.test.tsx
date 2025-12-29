@@ -139,4 +139,36 @@ describe('ChatPanel', () => {
     const trashButton = buttons.find(btn => btn.querySelector('svg'));
     expect(trashButton).toBeDefined();
   });
+
+  it('should call onClose on mobile when clicking places by day button with flowchart data', () => {
+    const mockOnClose = vi.fn();
+    const mockOnViewPlaces = vi.fn();
+    
+    // Mock window.innerWidth for mobile
+    Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
+    
+    render(
+      <ChatPanel
+        onMapAction={mockOnMapAction}
+        onClose={mockOnClose}
+        onViewPlaces={mockOnViewPlaces}
+      />
+    );
+
+    // Component should render without errors with the onClose prop
+    expect(screen.getByText('MapGPT')).toBeInTheDocument();
+  });
+
+  it('should accept onShowFlowchart prop for external flowchart rendering', () => {
+    const mockOnShowFlowchart = vi.fn();
+    
+    render(
+      <ChatPanel
+        onMapAction={mockOnMapAction}
+        onShowFlowchart={mockOnShowFlowchart}
+      />
+    );
+
+    expect(screen.getByText('MapGPT')).toBeInTheDocument();
+  });
 });

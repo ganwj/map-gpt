@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { MessageCircle, PanelLeftClose, List, ChevronDown, X, Map, Navigation, Loader2, AlertCircle } from 'lucide-react';
+import { MessageCircle, PanelLeftClose, List, ChevronDown, X, Map, Navigation, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { GoogleMap } from '@/components/GoogleMap';
 import { ChatPanel } from '@/components/ChatPanel';
 import { PlacesList } from '@/components/PlacesList';
@@ -7,7 +7,8 @@ import { PlaceDetails } from '@/components/PlaceDetails';
 import { SearchBar } from '@/components/SearchBar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
-import type { MapAction, PlaceData, SelectedPlace, SearchHistory, DirectionResult, DirectionError } from '@/types';
+import type { MapAction, PlaceData, SelectedPlace, SearchHistory, DirectionResult, DirectionError, TimePeriodPlaces } from '@/types';
+import { ItineraryFlowchart } from '@/components/ItineraryFlowchart';
 import { GOOGLE_MAPS_API_KEY } from '@/constants';
 import { PlacesAutocomplete } from '@/components/PlacesAutocomplete';
 import { getCurrentLocation } from '@/lib/geolocation';
@@ -37,6 +38,10 @@ function App() {
   const [mobileDirectionError, setMobileDirectionError] = useState<string | null>(null);
   const [directionsSuccess, setDirectionsSuccess] = useState(false);
   const [mobileDirectionsPending, setMobileDirectionsPending] = useState(false);
+  const [flowchartData, setFlowchartData] = useState<{
+    day: string;
+    timePeriods: TimePeriodPlaces;
+  } | null>(null);
 
   const handleMapAction = useCallback((action: MapAction) => {
     // Add timestamp to force re-trigger even if same action
@@ -264,6 +269,7 @@ function App() {
                 setIsPlacesListCollapsed(false);
                 setSelectedPlaceDetails(null);
               }}
+              onShowFlowchart={setFlowchartData}
             />
           </div>
         </div>
@@ -304,6 +310,7 @@ function App() {
                 setIsChatOpen(false);
               }}
               onClose={() => setIsChatOpen(false)}
+              onShowFlowchart={setFlowchartData}
             />
           </div>
         </div>
@@ -358,25 +365,34 @@ function App() {
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-1.5 md:gap-2 text-xs md:text-sm">
-                {directionResult.routes.map((route) => (
-                  <div
-                    key={route.mode}
-                    className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded bg-muted/50"
-                  >
-                    <span className="text-sm md:text-lg">
-                      {route.mode === 'driving' && '🚗'}
-                      {route.mode === 'walking' && '🚶'}
-                      {route.mode === 'bicycling' && '🚴'}
-                      {route.mode === 'transit' && '🚌'}
-                    </span>
-                    <div>
-                      <div className="font-medium capitalize text-xs md:text-sm">{route.mode}</div>
-                      <div className="text-muted-foreground text-[10px] md:text-xs">
-                        {route.duration} · {route.distance}
+                {directionResult.routes.map((route) => {
+                  const travelMode = route.mode === 'driving' ? 'driving' : route.mode === 'walking' ? 'walking' : route.mode === 'bicycling' ? 'bicycling' : 'transit';
+                  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(directionResult.origin)}&destination=${encodeURIComponent(directionResult.destination)}&travelmode=${travelMode}`;
+                  return (
+                    <a
+                      key={route.mode}
+                      href={googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 md:gap-2 p-1.5 md:p-2 rounded bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                      title={`Open in Google Maps (${route.mode})`}
+                    >
+                      <span className="text-sm md:text-lg">
+                        {route.mode === 'driving' && '🚗'}
+                        {route.mode === 'walking' && '🚶'}
+                        {route.mode === 'bicycling' && '🚴'}
+                        {route.mode === 'transit' && '🚌'}
+                      </span>
+                      <div className="flex-1">
+                        <div className="font-medium capitalize text-xs md:text-sm">{route.mode}</div>
+                        <div className="text-muted-foreground text-[10px] md:text-xs">
+                          {route.duration} · {route.distance}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -662,6 +678,22 @@ function App() {
                 setIsMobilePlacesOpen(false);
               }
             }}
+          />
+        )}
+
+        {/* Itinerary Flowchart - rendered at App level for mobile visibility */}
+        {flowchartData && (
+          <ItineraryFlowchart
+            day={flowchartData.day}
+            timePeriods={flowchartData.timePeriods}
+            places={placesList}
+            onPlaceClick={(placeName) => {
+              handleMapAction({ action: 'search', query: placeName });
+            }}
+            onDirections={(action) => {
+              handleMapAction(action);
+            }}
+            onClose={() => setFlowchartData(null)}
           />
         )}
       </div>
