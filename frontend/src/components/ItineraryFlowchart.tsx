@@ -134,9 +134,14 @@ export function ItineraryFlowchart({ day, timePeriods, places, onPlaceClick, onD
                                 className="flex-1 text-left p-3 rounded-lg border bg-background hover:bg-accent transition-colors group"
                               >
                                 <p className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-1">
-                                  {placeName.split('**').map((part, i) => 
-                                    i % 2 === 1 ? <strong key={i}>{part}</strong> : part
-                                  )}
+                                  {(() => {
+                                    // Extract just the place name (remove location suffix like "Tokyo Japan")
+                                    const displayName = placeName.replace(/\*\*/g, '').split(' ').slice(0, -2).join(' ') || placeName.replace(/\*\*/g, '');
+                                    // Apply bold formatting for text between **
+                                    return displayName.split('**').map((part, i) => 
+                                      i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+                                    );
+                                  })()}
                                 </p>
                                 {placeData && (
                                   <div className="flex items-center gap-2 mt-1">
