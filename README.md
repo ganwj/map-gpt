@@ -131,11 +131,6 @@ cd frontend
 npm run test
 ```
 
-Tests cover:
-- Component rendering and interactions
-- Type definitions
-- Utility functions
-
 ## Project Structure
 
 ```
