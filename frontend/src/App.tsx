@@ -329,6 +329,25 @@ function App() {
             placeIdToFetch={placeIdToFetch}
           />
 
+          {/* Direction Error Panel - shown on map for mobile */}
+          {(mobileDirectionError || placeDetailsDirectionError) && (
+            <div className="md:hidden absolute bottom-20 left-1/2 -translate-x-1/2 bg-destructive/10 border border-destructive/20 rounded-lg shadow-lg p-3 z-20 max-w-md w-[90%]">
+              <div className="flex items-center gap-2 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{mobileDirectionError || placeDetailsDirectionError?.message}</span>
+                <button 
+                  onClick={() => {
+                    setMobileDirectionError(null);
+                    setPlaceDetailsDirectionError(null);
+                  }} 
+                  className="hover:text-destructive/80"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Direction Results Panel */}
           {directionResult && (
             <div className="absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 md:p-4 z-20 max-w-md w-[90%] sm:w-auto">

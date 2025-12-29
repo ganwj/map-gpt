@@ -822,11 +822,11 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
   return (
     <div className="relative h-full w-full">
       <div ref={mapRef} className="h-full w-full" />
-      {/* Current Location Button */}
+      {/* Current Location Button - use fixed positioning on mobile for dynamic viewport */}
       <Button
         variant="secondary"
         size="icon"
-        className="absolute left-4 md:left-auto md:right-24 bottom-20 md:top-4 z-10 shadow-lg bg-background hover:bg-accent"
+        className="fixed md:absolute left-4 md:left-auto md:right-24 bottom-[4.5rem] md:bottom-auto md:top-4 z-10 shadow-lg bg-background hover:bg-accent"
         onClick={handleLocateMe}
         disabled={isLocating || !isLoaded}
         title="Go to my location"
