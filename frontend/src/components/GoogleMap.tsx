@@ -826,7 +826,7 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
       <Button
         variant="secondary"
         size="icon"
-        className="fixed md:absolute left-4 md:left-auto md:right-24 bottom-[4.5rem] md:bottom-auto md:top-4 z-10 shadow-lg bg-background hover:bg-accent"
+        className="fixed md:absolute left-4 md:left-auto md:right-24 bottom-[8rem] md:bottom-auto md:top-3 z-10 shadow-lg bg-background hover:bg-accent"
         onClick={handleLocateMe}
         disabled={isLocating || !isLoaded}
         title="Go to my location"

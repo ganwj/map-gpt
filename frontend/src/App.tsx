@@ -188,7 +188,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       {/* Top Header with Search Bar and Theme Toggle */}
-      <header className="flex items-center gap-4 px-2 sm:px-4 py-2 sm:py-3 border-b bg-background z-40 shrink-0 sticky top-0">
+      <header className="flex items-center gap-4 px-2 sm:px-4 py-2 sm:py-3 border-b bg-background z-40 shrink-0 fixed top-0 left-0 right-0 md:relative md:inset-auto">
         <div className="hidden sm:flex items-center gap-2 shrink-0">
           <img src={Logo} alt="MapGPT" className="h-8 w-8" />
           <h1 className="font-semibold text-lg hidden mr-2 md:block">MapGPT</h1>
@@ -209,7 +209,7 @@ function App() {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-[auto_1fr_auto] overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-[auto_1fr_auto] overflow-hidden pt-14 md:pt-0">
         {/* Chat Panel - Desktop sidebar */}
         <div
           className={`chat-panel hidden md:grid md:relative md:col-start-1 md:row-start-1 md:h-full border-r bg-background grid-rows-[auto_1fr] ${
@@ -329,18 +329,15 @@ function App() {
             placeIdToFetch={placeIdToFetch}
           />
 
-          {/* Direction Error Panel - shown on map for mobile */}
-          {(mobileDirectionError || placeDetailsDirectionError) && (
-            <div className="md:hidden absolute bottom-20 left-1/2 -translate-x-1/2 bg-destructive/10 border border-destructive/20 rounded-lg shadow-lg p-3 z-20 max-w-md w-[90%]">
-              <div className="flex items-center gap-2 text-destructive text-sm">
+          {/* Direction Error Panel - shown on map for mobile place details only */}
+          {placeDetailsDirectionError && (
+            <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 bg-destructive text-destructive-foreground rounded-lg shadow-lg p-3 z-20 max-w-md w-[90%]">
+              <div className="flex items-center gap-2 text-sm">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{mobileDirectionError || placeDetailsDirectionError?.message}</span>
+                <span className="flex-1">{placeDetailsDirectionError.message}</span>
                 <button 
-                  onClick={() => {
-                    setMobileDirectionError(null);
-                    setPlaceDetailsDirectionError(null);
-                  }} 
-                  className="hover:text-destructive/80"
+                  onClick={() => setPlaceDetailsDirectionError(null)} 
+                  className="hover:opacity-80"
                 >
                   <X className="h-4 w-4" />
                 </button>
