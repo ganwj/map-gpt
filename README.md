@@ -10,13 +10,11 @@ Try now at https://map-gpt-weld.vercel.app/
 
 - **AI-Powered Chat**: Natural language interface to interact with the map
 - **Location Search**: Find any place, address, or point of interest
-- **Directions**: Get driving, walking, cycling, and transit directions between locations
-- **Place Discovery**: Discover restaurants, hotels, attractions, and more
+- **Directions**: Get driving, walking, cycling, and transit directions between locations, tap to open Google Maps navigation
+- **Place Discovery**: Discover restaurants, hotels, attractions, and more, with photos, ratings, and summary
 - **Trip Planning Mode**: Plan multi-day itineraries with time-period organization (Morning, Afternoon, Evening)
 - **Itinerary Flowchart**: Visual flowchart view of daily itineraries with quick directions between places
-- **Places Details**: Searchable list of discovered places with photos, ratings, and AI-generated summary
-- **Interactive Map**: Click on the map to learn about locations
-
+  
 ## Tech Stack
 
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
@@ -151,6 +149,8 @@ map-gpt/
 │   │   │   ├── ItineraryFlowchart.tsx   # Trip itinerary flowchart
 │   │   │   ├── PlacesAutocomplete.tsx   # Places search autocomplete
 │   │   │   └── SearchBar.tsx            # Map search bar
+|   |   |   └── MobileBottomSheet.tsx    # Bottom sheet menu
+|   |   |   └── ThemeToggle.tsx          # Theme change button
 │   │   ├── types/
 │   │   │   └── index.ts          # TypeScript type definitions
 │   │   ├── constants/
