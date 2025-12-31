@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,7 @@ interface PlacesAutocompleteProps {
   isLoadingLocation?: boolean;
   disabled?: boolean;
   countryRestriction?: string;
+  showClearButton?: boolean;
 }
 
 export function PlacesAutocomplete({
@@ -29,6 +30,7 @@ export function PlacesAutocomplete({
   isLoadingLocation = false,
   disabled = false,
   countryRestriction,
+  showClearButton = true,
 }: PlacesAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -121,15 +123,27 @@ export function PlacesAutocomplete({
 
   return (
     <div className={cn('relative flex items-center gap-2', className)}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={handleInputChange}
-        placeholder={placeholder}
-        disabled={disabled}
-        className="flex-1 h-9 px-3 text-sm rounded-md border bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-      />
+      <div className="relative flex-1">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleInputChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="w-full h-9 px-3 pr-8 text-sm rounded-md border bg-white text-gray-900 border-gray-300 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        {showClearButton && value && !disabled && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+            title="Clear"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       {showLocationButton && onUseCurrentLocation && (
         <Button
           type="button"

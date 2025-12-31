@@ -187,4 +187,69 @@ describe('PlacesAutocomplete', () => {
 
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
+
+  it('should show clear button when value is not empty', () => {
+    const onChange = vi.fn();
+    render(
+      <PlacesAutocomplete
+        value="Tokyo"
+        onChange={onChange}
+      />
+    );
+
+    expect(screen.getByTitle('Clear')).toBeInTheDocument();
+  });
+
+  it('should not show clear button when value is empty', () => {
+    const onChange = vi.fn();
+    render(
+      <PlacesAutocomplete
+        value=""
+        onChange={onChange}
+      />
+    );
+
+    expect(screen.queryByTitle('Clear')).not.toBeInTheDocument();
+  });
+
+  it('should call onChange with empty string when clear button is clicked', () => {
+    const onChange = vi.fn();
+    render(
+      <PlacesAutocomplete
+        value="Tokyo"
+        onChange={onChange}
+      />
+    );
+
+    const clearButton = screen.getByTitle('Clear');
+    fireEvent.click(clearButton);
+
+    expect(onChange).toHaveBeenCalledWith('');
+  });
+
+  it('should not show clear button when showClearButton is false', () => {
+    const onChange = vi.fn();
+    render(
+      <PlacesAutocomplete
+        value="Tokyo"
+        onChange={onChange}
+        showClearButton={false}
+      />
+    );
+
+    expect(screen.queryByTitle('Clear')).not.toBeInTheDocument();
+  });
+
+  it('should not show clear button when disabled', () => {
+    const onChange = vi.fn();
+    render(
+      <PlacesAutocomplete
+        value="Tokyo"
+        onChange={onChange}
+        disabled
+      />
+    );
+
+    expect(screen.queryByTitle('Clear')).not.toBeInTheDocument();
+  });
 });

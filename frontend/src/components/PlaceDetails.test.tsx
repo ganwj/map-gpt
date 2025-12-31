@@ -259,4 +259,54 @@ describe('PlaceDetails', () => {
 
     expect(screen.getByText('tourist attraction')).toBeInTheDocument();
   });
+
+  it('should render review sort dropdown with all options', () => {
+    const placeWithReviews = {
+      ...mockPlace,
+      reviews: [
+        { authorName: 'User1', rating: 5, text: 'Great!', relativeTime: '1 week ago' },
+        { authorName: 'User2', rating: 3, text: 'OK', relativeTime: '2 months ago' },
+      ],
+    };
+
+    render(
+      <PlaceDetails
+        place={placeWithReviews}
+        onClose={vi.fn()}
+      />
+    );
+
+    const sortSelect = screen.getByRole('combobox');
+    expect(sortSelect).toBeInTheDocument();
+    
+    // Check all options are available
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(4);
+    expect(options[0]).toHaveTextContent('Newest first');
+    expect(options[1]).toHaveTextContent('Oldest first');
+    expect(options[2]).toHaveTextContent('Highest rated');
+    expect(options[3]).toHaveTextContent('Lowest rated');
+  });
+
+  it('should change review sort when dropdown value changes', () => {
+    const placeWithReviews = {
+      ...mockPlace,
+      reviews: [
+        { authorName: 'User1', rating: 5, text: 'Great!', relativeTime: '1 week ago' },
+        { authorName: 'User2', rating: 3, text: 'OK', relativeTime: '2 months ago' },
+      ],
+    };
+
+    render(
+      <PlaceDetails
+        place={placeWithReviews}
+        onClose={vi.fn()}
+      />
+    );
+
+    const sortSelect = screen.getByRole('combobox');
+    fireEvent.change(sortSelect, { target: { value: 'highest' } });
+    
+    expect(sortSelect).toHaveValue('highest');
+  });
 });

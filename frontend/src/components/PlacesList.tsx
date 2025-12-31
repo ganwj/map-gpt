@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { Star, MapPin, ChevronRight, ImageOff, Search } from 'lucide-react';
+import { Star, MapPin, ChevronRight, ImageOff, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -149,8 +149,18 @@ export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed:
             placeholder="Search places..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 pr-8 h-9"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
+              title="Clear"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
       <ScrollArea className="flex-1">

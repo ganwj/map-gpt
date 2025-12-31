@@ -159,4 +159,43 @@ describe('PlacesList', () => {
 
     expect(screen.getByText(/\(3\)/)).toBeInTheDocument();
   });
+
+  it('should show clear button when search query is not empty', () => {
+    render(
+      <PlacesList
+        places={mockPlaces}
+        onPlaceClick={mockOnPlaceClick}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText('Search places...');
+    fireEvent.change(searchInput, { target: { value: 'Tower' } });
+
+    expect(screen.getByTitle('Clear')).toBeInTheDocument();
+  });
+
+  it('should clear search query when clear button is clicked', () => {
+    render(
+      <PlacesList
+        places={mockPlaces}
+        onPlaceClick={mockOnPlaceClick}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText('Search places...');
+    fireEvent.change(searchInput, { target: { value: 'Tower' } });
+
+    // Only Tokyo Tower should be visible
+    expect(screen.getByText('Tokyo Tower')).toBeInTheDocument();
+    expect(screen.queryByText('Senso-ji Temple')).not.toBeInTheDocument();
+
+    // Click clear button
+    const clearButton = screen.getByTitle('Clear');
+    fireEvent.click(clearButton);
+
+    // All places should be visible again
+    expect(screen.getByText('Tokyo Tower')).toBeInTheDocument();
+    expect(screen.getByText('Senso-ji Temple')).toBeInTheDocument();
+    expect(screen.getByText('Shibuya Crossing')).toBeInTheDocument();
+  });
 });

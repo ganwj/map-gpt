@@ -17,7 +17,40 @@ interface PlaceDetailsProps {
   onClearDirectionError?: () => void;
 }
 
-type ReviewSort = 'newest' | 'oldest';
+type ReviewSort = 'newest' | 'oldest' | 'highest' | 'lowest';
+
+// Helper to parse relative time strings like "2 weeks ago", "3 months ago" into sortable values
+function parseRelativeTime(relativeTime: string): number {
+  if (!relativeTime) return 0;
+  const lower = relativeTime.toLowerCase();
+  
+  // Extract number and unit
+  const match = lower.match(/(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*ago/);
+  if (!match) {
+    // Handle "a week ago", "a month ago", etc.
+    if (lower.includes('a week ago') || lower.includes('1 week ago')) return 7 * 24 * 60;
+    if (lower.includes('a month ago') || lower.includes('1 month ago')) return 30 * 24 * 60;
+    if (lower.includes('a year ago') || lower.includes('1 year ago')) return 365 * 24 * 60;
+    if (lower.includes('a day ago') || lower.includes('1 day ago')) return 24 * 60;
+    if (lower.includes('an hour ago') || lower.includes('1 hour ago')) return 60;
+    return 0;
+  }
+  
+  const num = parseInt(match[1], 10);
+  const unit = match[2];
+  
+  // Convert to minutes for comparison (higher = older)
+  switch (unit) {
+    case 'second': return num / 60;
+    case 'minute': return num;
+    case 'hour': return num * 60;
+    case 'day': return num * 24 * 60;
+    case 'week': return num * 7 * 24 * 60;
+    case 'month': return num * 30 * 24 * 60;
+    case 'year': return num * 365 * 24 * 60;
+    default: return 0;
+  }
+}
 
 function ReviewCard({ review }: { review: Review }) {
   return (
@@ -452,6 +485,8 @@ export function PlaceDetails({ place, onClose, onGetDirections, directionError, 
                   >
                     <option value="newest">Newest first</option>
                     <option value="oldest">Oldest first</option>
+                    <option value="highest">Highest rated</option>
+                    <option value="lowest">Lowest rated</option>
                   </select>
                 </div>
               </div>
@@ -481,11 +516,19 @@ export function PlaceDetails({ place, onClose, onGetDirections, directionError, 
               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                 {[...place.reviews]
                   .sort((a, b) => {
-                    const timeA = a.relativeTime || '';
-                    const timeB = b.relativeTime || '';
+                    if (reviewSort === 'highest') {
+                      return (b.rating || 0) - (a.rating || 0);
+                    }
+                    if (reviewSort === 'lowest') {
+                      return (a.rating || 0) - (b.rating || 0);
+                    }
+                    // For newest/oldest, parse the relative time string
+                    const timeA = parseRelativeTime(a.relativeTime || '');
+                    const timeB = parseRelativeTime(b.relativeTime || '');
+                    // Lower value = more recent (e.g., "2 days ago" < "3 weeks ago")
                     return reviewSort === 'newest' 
-                      ? timeA.localeCompare(timeB)
-                      : timeB.localeCompare(timeA);
+                      ? timeA - timeB
+                      : timeB - timeA;
                   })
                   .map((review, index) => (
                     <ReviewCard key={index} review={review} />
