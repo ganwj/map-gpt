@@ -89,11 +89,7 @@ function App() {
     setSelectedPlaceDetails(place);
     setPlaceIdToFetch(null);
     // Add the place to placesList if not already present
-    setPlacesList(prev => {
-      const exists = prev.some(p => p.id === place.id);
-      if (exists) return prev;
-      return [place, ...prev];
-    });
+    setPlacesList([place]);
     // On mobile, show places panel with details when marker is clicked
     if (window.innerWidth < 768) {
       setIsMobilePlacesOpen(true);
