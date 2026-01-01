@@ -215,7 +215,7 @@ describe('ChatPanel', () => {
 
     await screen.findByText('Itinerary response');
 
-    // Should display day button with place count (no auto multiSearch)
+    // Should display day button with place count (no automatic map actions)
     expect(screen.getByText('Day 1 (5)')).toBeInTheDocument();
   });
 });

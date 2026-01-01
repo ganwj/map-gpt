@@ -7,7 +7,7 @@ import { PlaceDetails } from '@/components/PlaceDetails';
 import { SearchBar } from '@/components/SearchBar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
-import type { MapAction, PlaceData, SelectedPlace, SearchHistory, DirectionResult, DirectionError, TimePeriodPlaces, PlacesV2Day } from '@/types';
+import type { MapAction, PlaceData, SelectedPlace, DirectionResult, DirectionError, TimePeriodPlaces, PlacesV2Day } from '@/types';
 import { ItineraryFlowchart } from '@/components/ItineraryFlowchart';
 import { GOOGLE_MAPS_API_KEY } from '@/constants';
 import { PlacesAutocomplete } from '@/components/PlacesAutocomplete';
@@ -22,9 +22,7 @@ function App() {
   const [placeIdToFetch, setPlaceIdToFetch] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [isPlacesListCollapsed, setIsPlacesListCollapsed] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
-  const [currentSearchQuery, setCurrentSearchQuery] = useState<string | null>(null);
-  const [chatWidth, setChatWidth] = useState(380);
+      const [chatWidth, setChatWidth] = useState(380);
   const isResizingRef = useRef(false);
   const [directionResult, setDirectionResult] = useState<DirectionResult | null>(null);
   const [searchBarDirectionError, setSearchBarDirectionError] = useState<DirectionError | null>(null);
@@ -47,11 +45,6 @@ function App() {
   const handleMapAction = useCallback((action: MapAction) => {
     // Add timestamp to force re-trigger even if same action
     setMapAction({ ...action, _timestamp: Date.now() } as MapAction);
-    if (action.action === 'search' && action.query) {
-      setSelectedPlaceDetails(null);
-      setIsPlacesListCollapsed(false);
-      setCurrentSearchQuery(action.query);
-    }
   }, []);
 
   const handlePlaceSelect = useCallback((place: PlaceData) => {
@@ -65,27 +58,7 @@ function App() {
     }
   }, []);
 
-  const handlePlacesFound = useCallback((places: PlaceData[], query?: string) => {
-    setPlacesList(places);
-    // Clear selected place details when new places are found
-    setSelectedPlaceDetails(null);
-    if (places.length > 0) {
-      setIsPlacesListCollapsed(false);
-      // Store in search history
-      if (query || currentSearchQuery) {
-        setSearchHistory(prev => {
-          const newEntry: SearchHistory = {
-            query: query || currentSearchQuery || '',
-            places,
-            timestamp: Date.now(),
-          };
-          // Keep last 10 searches
-          return [newEntry, ...prev.slice(0, 9)];
-        });
-      }
-    }
-  }, [currentSearchQuery]);
-
+  
   const handlePlaceDetailsLoaded = useCallback((place: PlaceData) => {
     setSelectedPlaceDetails(place);
     setPlaceIdToFetch(null);
@@ -141,7 +114,7 @@ function App() {
   }, []);
 
   const handleSearchBarSearch = useCallback((query: string) => {
-    handleMapAction({ action: 'search', query });
+    handleMapAction({ action: 'searchOne', query });
   }, [handleMapAction]);
 
   const handleSearchBarDirections = useCallback((origin: string, destination: string) => {
@@ -267,15 +240,8 @@ function App() {
             <ChatPanel 
               onMapAction={handleMapAction} 
               selectedPlace={selectedPlace}
-              searchHistory={searchHistory}
               places={placesList}
-              onViewPlaces={(query?: string) => {
-                if (query) {
-                  const historyEntry = searchHistory.find(h => h.query === query);
-                  if (historyEntry) {
-                    setPlacesList(historyEntry.places);
-                  }
-                }
+              onViewPlaces={() => {
                 setIsPlacesListCollapsed(false);
                 setSelectedPlaceDetails(null);
               }}
@@ -305,15 +271,8 @@ function App() {
             <ChatPanel 
               onMapAction={handleMapAction} 
               selectedPlace={selectedPlace}
-              searchHistory={searchHistory}
               places={placesList}
-              onViewPlaces={(query?: string) => {
-                if (query) {
-                  const historyEntry = searchHistory.find(h => h.query === query);
-                  if (historyEntry) {
-                    setPlacesList(historyEntry.places);
-                  }
-                }
+              onViewPlaces={() => {
                 setIsPlacesListCollapsed(false);
                 setSelectedPlaceDetails(null);
                 setIsMobilePlacesOpen(true);
@@ -339,7 +298,6 @@ function App() {
             apiKey={GOOGLE_MAPS_API_KEY}
             mapAction={mapAction}
             onPlaceSelect={handlePlaceSelect}
-            onPlacesFound={handlePlacesFound}
             onPlaceDetailsLoaded={handlePlaceDetailsLoaded}
             onDirectionsResult={handleDirectionsResult}
             onDirectionsError={handleDirectionsError}
@@ -702,7 +660,7 @@ function App() {
             dayV2={flowchartData.dayV2}
             places={placesList}
             onPlaceClick={(placeName) => {
-              handleMapAction({ action: 'search', query: placeName });
+              handleMapAction({ action: 'searchOne', query: placeName });
             }}
             onDirections={(action) => {
               handleMapAction(action);

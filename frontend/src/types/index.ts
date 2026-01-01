@@ -1,9 +1,8 @@
 // Shared types for the MapGPT application
 
 export interface MapAction {
-  action: 'search' | 'searchOne' | 'goto' | 'directions' | 'marker' | 'multiSearch';
+  action: 'searchOne' | 'goto' | 'directions' | 'marker';
   query?: string;
-  queries?: string[];
   lat?: number;
   lng?: number;
   zoom?: number;
@@ -103,12 +102,6 @@ export const INTEREST_OPTIONS = ['Food', 'Culture', 'Shopping', 'Nature', 'Night
 export const TRAVEL_STYLES = ['Budget', 'Mid-range', 'Luxury'] as const;
 export const DURATION_OPTIONS = ['1-2 days', '3-4 days', '5-7 days', '1-2 weeks', '2+ weeks'] as const;
 
-// Search history entry to track places per search
-export interface SearchHistory {
-  query: string;
-  places: PlaceData[];
-  timestamp: number;
-}
 
 // Direction result with travel times for different modes
 export interface DirectionResult {

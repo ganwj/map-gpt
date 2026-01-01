@@ -87,13 +87,13 @@ describe('types', () => {
   });
 
   describe('MapAction type', () => {
-    it('should accept search action', () => {
+    it('should accept searchOne action', () => {
       const action: MapAction = {
-        action: 'search',
+        action: 'searchOne',
         query: 'coffee shops',
       };
 
-      expect(action.action).toBe('search');
+      expect(action.action).toBe('searchOne');
       expect(action.query).toBe('coffee shops');
     });
 

@@ -10,14 +10,13 @@ interface GoogleMapProps {
   apiKey: string;
   mapAction?: MapAction | null;
   onPlaceSelect?: (place: PlaceData) => void;
-  onPlacesFound?: (places: PlaceData[], query?: string) => void;
   onPlaceDetailsLoaded?: (place: PlaceData) => void;
   onDirectionsResult?: (result: DirectionResult) => void;
   onDirectionsError?: (error: DirectionError) => void;
   placeIdToFetch?: string | null;
 }
 
-export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, onPlacesFound, onPlaceDetailsLoaded, onDirectionsResult, onDirectionsError, placeIdToFetch }: GoogleMapProps) {
+export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, onPlaceDetailsLoaded, onDirectionsResult, onDirectionsError, placeIdToFetch }: GoogleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
@@ -112,79 +111,7 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
     renderer.setMap(newMap);
     setDirectionsRenderer(renderer);
 
-    // Listen for clicks on POI (Points of Interest) markers on the map
-    newMap.addListener('click', async (e: google.maps.MapMouseEvent & { placeId?: string }) => {
-      // If a POI was clicked, fetch its details
-      if (e.placeId) {
-        e.stop?.(); // Prevent default info window
-        
-        try {
-          const { Place } = await google.maps.importLibrary('places') as google.maps.PlacesLibrary;
-          const place = new Place({ id: e.placeId });
-          
-          await place.fetchFields({
-            fields: [
-              'id', 'displayName', 'formattedAddress', 'location',
-              'rating', 'userRatingCount', 'priceLevel', 'types',
-              'photos', 'reviews', 'regularOpeningHours',
-              'internationalPhoneNumber', 'websiteURI',
-            ],
-          });
-
-          const photoUrls: string[] = [];
-          if (place.photos) {
-            for (const photo of place.photos.slice(0, 10)) {
-              try {
-                const url = photo.getURI({ maxWidth: 800, maxHeight: 600 });
-                if (url) photoUrls.push(url);
-              } catch {}
-            }
-          }
-
-          const reviews: PlaceData['reviews'] = [];
-          if (place.reviews) {
-            for (const review of place.reviews) {
-              reviews.push({
-                authorName: review.authorAttribution?.displayName || 'Anonymous',
-                rating: review.rating || 0,
-                text: review.text || '',
-                relativeTime: review.relativePublishTimeDescription || '',
-                profilePhotoUrl: review.authorAttribution?.photoURI || undefined,
-              });
-            }
-          }
-
-          let isOpenNow: boolean | undefined;
-          try {
-            const openResult = await place.isOpen();
-            isOpenNow = openResult ?? undefined;
-          } catch {}
-
-          const placeData: PlaceData = {
-            id: place.id || e.placeId,
-            displayName: place.displayName || '',
-            formattedAddress: place.formattedAddress || '',
-            location: place.location ? { lat: place.location.lat(), lng: place.location.lng() } : null,
-            rating: place.rating ?? undefined,
-            userRatingCount: place.userRatingCount ?? undefined,
-            priceLevel: place.priceLevel?.toString() || undefined,
-            types: place.types || undefined,
-            photoUrls,
-            reviews,
-            openingHours: place.regularOpeningHours ? {
-              weekdayText: place.regularOpeningHours.weekdayDescriptions || undefined,
-              isOpen: isOpenNow,
-            } : undefined,
-            phoneNumber: place.internationalPhoneNumber || undefined,
-            website: place.websiteURI || undefined,
-          };
-
-          onPlaceDetailsLoadedRef.current?.(placeData);
-        } catch (error) {
-          console.error('Error fetching POI place details:', error);
-        }
-      }
-    });
+    // POI click listener removed to reduce unnecessary API calls
   }, [isLoaded, map]);
 
   const clearMarkers = useCallback(() => {
@@ -317,95 +244,11 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
     [map, fetchPlaceDetails]
   );
 
-  const searchPlaces = useCallback(
-    async (query: string) => {
-      if (!isLoaded || !map) return;
-
-      try {
-        const { Place } = await google.maps.importLibrary('places') as google.maps.PlacesLibrary;
-        
-        const request = {
-          textQuery: query,
-          fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating', 'userRatingCount', 'types', 'photos', 'regularOpeningHours'],
-          maxResultCount: 20,
-        };
-
-        const { places } = await Place.searchByText(request);
-
-        if (places && places.length > 0) {
-          clearMarkers();
-
-          const placesData: PlaceData[] = [];
-
-          for (const place of places) {
-            if (place.location) {
-              addMarker(
-                place.location.lat(),
-                place.location.lng(),
-                place.displayName || '',
-                place.id
-              );
-
-              let isOpen: boolean | undefined;
-              try {
-                const isOpenResult = place.isOpen();
-                isOpen = isOpenResult instanceof Promise ? undefined : isOpenResult;
-              } catch {
-                isOpen = undefined;
-              }
-
-              const photoUrls: string[] = [];
-              if (place.photos && place.photos.length > 0) {
-                try {
-                  const url = place.photos[0].getURI({ maxWidth: 200, maxHeight: 200 });
-                  if (url) photoUrls.push(url);
-                } catch {
-                  // Skip failed photo
-                }
-              }
-
-              placesData.push({
-                id: place.id || '',
-                displayName: place.displayName || '',
-                formattedAddress: place.formattedAddress || '',
-                location: {
-                  lat: place.location.lat(),
-                  lng: place.location.lng(),
-                },
-                rating: place.rating ?? undefined,
-                userRatingCount: place.userRatingCount ?? undefined,
-                types: place.types,
-                photoUrls,
-                openingHours: place.regularOpeningHours ? {
-                  isOpen,
-                } : undefined,
-              });
-            }
-          }
-
-          if (places[0]?.location) {
-            map.setCenter(places[0].location);
-            map.setZoom(13);
-          }
-
-          onPlacesFound?.(placesData, query);
-        }
-      } catch (error) {
-        console.error('Error searching places:', error);
-      }
-    },
-    [isLoaded, map, clearMarkers, addMarker, onPlacesFound]
-  );
-
+  
   useEffect(() => {
     if (!mapAction || !map || !isLoaded) return;
 
     switch (mapAction.action) {
-      case 'search':
-        if (mapAction.query) {
-          searchPlaces(mapAction.query);
-        }
-        break;
 
       case 'searchOne':
         if (mapAction.query) {
@@ -431,43 +274,8 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
                 map.setCenter(location);
                 map.setZoom(16);
 
-                let isOpen: boolean | undefined;
-                try {
-                  const isOpenResult = place.isOpen();
-                  isOpen = isOpenResult instanceof Promise ? undefined : isOpenResult;
-                } catch {
-                  isOpen = undefined;
-                }
-
-                const photoUrls: string[] = [];
-                if (place.photos && place.photos.length > 0) {
-                  try {
-                    const url = place.photos[0].getURI({ maxWidth: 400 });
-                    if (url) photoUrls.push(url);
-                  } catch {
-                    // Skip failed photo
-                  }
-                }
-
-                const placeData: PlaceData = {
-                  id: place.id || '',
-                  displayName: place.displayName || '',
-                  formattedAddress: place.formattedAddress || '',
-                  location: {
-                    lat: location.lat(),
-                    lng: location.lng(),
-                  },
-                  rating: place.rating ?? undefined,
-                  userRatingCount: place.userRatingCount ?? undefined,
-                  types: place.types,
-                  photoUrls,
-                  openingHours: place.regularOpeningHours ? {
-                    isOpen,
-                  } : undefined,
-                };
-
-                onPlacesFound?.([placeData], mapAction.query);
-              }
+                
+                              }
             } catch (error) {
               console.error('Error in searchOne:', error);
             }
@@ -653,105 +461,8 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
             });
         }
         break;
-
-      case 'multiSearch':
-        if (mapAction.queries && mapAction.queries.length > 0) {
-          // Search for multiple places using new Place API
-          clearMarkers();
-          const bounds = new google.maps.LatLngBounds();
-          const orderedPlaces: (PlaceData | null)[] = new Array(mapAction.queries.length).fill(null);
-          
-          (async () => {
-            try {
-              const { Place } = await google.maps.importLibrary('places') as google.maps.PlacesLibrary;
-              
-              // First, geocode the first query to get location context
-              const geocoder = new google.maps.Geocoder();
-              const firstQuery = mapAction.queries![0];
-              
-              let locationBias: google.maps.LatLng | undefined;
-              
-              try {
-                const geoResults = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-                  geocoder.geocode({ address: firstQuery }, (results, status) => {
-                    if (status === google.maps.GeocoderStatus.OK && results) {
-                      resolve(results);
-                    } else {
-                      reject(status);
-                    }
-                  });
-                });
-                
-                if (geoResults[0]?.geometry?.location) {
-                  locationBias = geoResults[0].geometry.location;
-                }
-              } catch {
-                // Continue without location bias if geocoding fails
-              }
-              
-              const searchPromises = mapAction.queries!.map(async (query, index) => {
-                try {
-                  const request: { textQuery: string; fields: string[]; maxResultCount: number; locationBias?: google.maps.LatLng } = {
-                    textQuery: query,
-                    fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating', 'userRatingCount', 'types', 'photos'],
-                    maxResultCount: 1,
-                  };
-                  
-                  if (locationBias) {
-                    request.locationBias = locationBias;
-                  }
-                  
-                  const { places } = await Place.searchByText(request);
-                  
-                  if (places && places[0]?.location) {
-                    const place = places[0];
-                    const location = place.location!;
-                    const lat = location.lat();
-                    const lng = location.lng();
-                    addMarker(lat, lng, place.displayName || query, place.id);
-                    bounds.extend(location);
-                    
-                    const photoUrls: string[] = [];
-                    if (place.photos && place.photos.length > 0) {
-                      try {
-                        const url = place.photos[0].getURI({ maxWidth: 400 });
-                        if (url) photoUrls.push(url);
-                      } catch {
-                        // Skip failed photo
-                      }
-                    }
-                    
-                    orderedPlaces[index] = {
-                      id: place.id || '',
-                      displayName: place.displayName || query,
-                      formattedAddress: place.formattedAddress || '',
-                      location: { lat, lng },
-                      rating: place.rating ?? undefined,
-                      userRatingCount: place.userRatingCount ?? undefined,
-                      types: place.types,
-                      photoUrls,
-                    };
-                  }
-                } catch (error) {
-                  console.error(`Error searching for "${query}":`, error);
-                }
-              });
-              
-              await Promise.all(searchPromises);
-              
-              const validPlaces = orderedPlaces.filter((p): p is PlaceData => p !== null);
-              if (validPlaces.length > 0) {
-                map.fitBounds(bounds);
-                onPlacesFound?.(validPlaces);
-              }
-            } catch (error) {
-              console.error('Error in multiSearch:', error);
-            }
-          })();
-        }
-        break;
     }
-  }, [mapAction, map, isLoaded, directionsRenderer, clearMarkers, addMarker, searchPlaces, onPlacesFound]);
+  }, [mapAction, map, isLoaded, directionsRenderer, clearMarkers, addMarker]);
 
   useEffect(() => {
     if (placeIdToFetch && isLoaded) {
