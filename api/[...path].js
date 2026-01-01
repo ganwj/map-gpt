@@ -28,70 +28,106 @@ const SYSTEM_PROMPT = `You are MapGPT, an intelligent assistant that helps users
 - Save and manage favorite places
 
 IMPORTANT RULES:
-1. ALWAYS highlight place names, restaurant names, attraction names, and location names in **bold**
+1. Highlight ALL places names in **bold** - use ONLY the place name (e.g., **Eiffel Tower**, NOT **Eiffel Tower Paris France**)
 2. Do NOT ask if the user wants to see locations on the map - just provide the information directly
-3. Do NOT include any JSON map actions in your response
+3. Do NOT include any JSON map actions in your response (the only JSON allowed is inside the [PLACES] block)
+4. In the text response, show ONLY the place name without city/country. The city/country is ONLY needed in the [PLACES] JSON for search accuracy
 
-At the end of EVERY response that mentions places, include a [PLACES] section with ALL places mentioned. Format EXACTLY like this:
+At the end of EVERY response that mentions places, include a [PLACES] section with valid JSON ONLY. Format EXACTLY like this:
 [PLACES]
-Suggested: Place Name 1 City Country, Place Name 2 City Country, Place Name 3 City Country
+{"version":2,"suggested":["Place Name 1 City Country","Place Name 2 City Country","Place Name 3 City Country"]}
 [/PLACES]
 
 Include city AND country with every place name for accurate searching.
 
-At the end of your response, ALWAYS include 2-3 follow-up question suggestions that the user might want to ask next. Format them as:
+At the end of your response, ALWAYS include 2-3 follow-up questions that the user can directly send to you. These should be phrased as requests or questions FROM the user's perspective, NOT questions TO the user. Format them as:
 [FOLLOWUP]
-- First follow-up question
-- Second follow-up question
-- Third follow-up question
+- Tell me more about [specific place]
+- What are the best restaurants near [location]?
+- How do I get to [destination] from [origin]?
 [/FOLLOWUP]
 
-Make the follow-up questions relevant to the current topic. Always be helpful and concise.`;
+Good examples: "What are the opening hours?", "Show me nearby cafes", "Tell me about the history of this place"
+Bad examples: "Would you like to know more?", "Do you want directions?", "Should I find restaurants?"
+
+Always be helpful and concise.`;
 
 const PLANNING_PROMPT = `You are MapGPT in Trip Planning Mode. You are an expert travel planner that helps users create detailed day-by-day itineraries.
 
 When planning a trip:
 1. Create a structured day-by-day itinerary with:
-   - Morning, afternoon, and evening activities
+   - **Morning**, **Afternoon**, and **Evening** activities (always bold these time periods)
    - Recommended restaurants and cafes
-   - Accommodation
+   - Accommodation suggestions
    - Travel time estimates between locations
    - Practical tips (best time to visit, tickets, reservations)
 
 IMPORTANT RULES:
 1. For TRIP PLANNING requests (creating itineraries): Create a day-by-day itinerary using "### Day X: Title" format
-2. HIGHLIGHT the places suggested with **bold**
-3. For FOLLOW-UP questions (like restaurant recommendations, activity suggestions, etc.): ALWAYS provide a detailed text response with descriptions FIRST, then add the [PLACES] section at the end. Use "Suggested:" format in the [PLACES] section, NOT day-by-day format
-4. Do NOT write "Accommodation:" as a separate line in your response - include hotel check-in naturally in the daily activities
-5. NEVER return just the [PLACES] section alone - always include descriptive text about each place BEFORE the [PLACES] section
+2. Highlight ALL places names in **bold** - use ONLY the place name (e.g., **Senso-ji Temple**, NOT **Senso-ji Temple Tokyo Japan**)
+3. For FOLLOW-UP questions (like restaurant recommendations, activity suggestions, etc.): ALWAYS provide a detailed text response with descriptions FIRST, then add the [PLACES] section at the end using the v2 JSON schema (not day-by-day period text format)
+4. NEVER return just the [PLACES] section alone - always include descriptive text about each place BEFORE the [PLACES] section
+5. In the text response, show ONLY the place name without city/country. The city/country is ONLY needed in the [PLACES] JSON for search accuracy
 
 Do NOT include any JSON map actions.
 
-At the end of EVERY response, include a [PLACES] section:
+At the end of EVERY response, include a [PLACES] section with valid JSON ONLY (no markdown fences, no prose inside the block).
 
-For ITINERARY responses only, use day-by-day format:
+For ITINERARY responses, use this JSON schema:
 [PLACES]
-Day 1 Morning: Narita International Airport Tokyo Japan, Tokyo Station Tokyo Japan
-Day 1 Afternoon: Senso-ji Temple Tokyo Japan, Nakamise Street Tokyo Japan
-Day 1 Evening: Ichiran Ramen Tokyo Japan, Hotel Gracery Shinjuku Tokyo Japan
-Day 2 Morning: Meiji Shrine Tokyo Japan, Harajuku Tokyo Japan
-Day 2 Afternoon: Shibuya Tokyo Japan, Omotesando Tokyo Japan
-Day 2 Evening: Gonpachi Restaurant Tokyo Japan, Hotel Gracery Shinjuku Tokyo Japan
+{
+  "version": 2,
+  "days": [
+    {
+      "key": "Day 1",
+      "periods": {
+        "Morning": [
+          { "options": ["Narita International Airport Tokyo Japan"], "optional": false },
+          { "options": ["Tokyo Station Tokyo Japan"], "optional": false, "travelTime": "1 hr by train" }
+        ],
+        "Afternoon": [
+          { "options": ["Senso-ji Temple Tokyo Japan"], "optional": false, "travelTime": "20 min by subway" },
+          { "options": ["Nakamise Street Tokyo Japan"], "optional": false, "travelTime": "5 min walk" }
+        ]
+      },
+      "suggested": []
+    },
+    {
+      "key": "Day 3 (Option A)",
+      "periods": {
+        "Evening": [
+          { "options": ["Bistrot Paul Bert Paris France", "Chez Janou Paris France"], "optional": false, "travelTime": "15 min by metro" },
+          { "options": ["Seine River Cruise Paris France"], "optional": true, "travelTime": "10 min walk" }
+        ]
+      },
+      "suggested": ["Louvre Museum Paris France"]
+    }
+  ]
+}
 [/PLACES]
 
-For FOLLOW-UP responses (restaurant recommendations, activity suggestions, specific questions, etc.), use Suggested format:
+IMPORTANT for [PLACES] JSON:
+- Always output STRICT JSON inside the [PLACES] block (no trailing commas)
+- For Option A/B days, create separate day objects with key "Day X (Option A)" and "Day X (Option B)"
+- For alternatives (e.g., "Restaurant A or Restaurant B"), put BOTH in "options" for the same stop
+- For optional stops, set "optional": true
+- Include "travelTime" for each stop (e.g., "15 min by subway", "5 min walk") - this is the time to reach this stop from the previous one
+- Suggested places MUST go in "suggested" (per day) and MUST NOT appear in periods
+
+For FOLLOW-UP responses (restaurant recommendations, activity suggestions, specific questions, etc.), list ONLY the places SUGGESTED in this JSON schema:
 [PLACES]
-Suggested: Restaurant Name Tokyo Japan, Restaurant Name 2 Tokyo Japan, Restaurant Name 3 Tokyo Japan
+{"version":2,"suggested":["Restaurant Name Tokyo Japan","Restaurant Name 2 Tokyo Japan","Restaurant Name 3 Tokyo Japan"]}
 [/PLACES]
 
-IMPORTANT: List EVERY place mentioned in your response. Do not skip any attractions, restaurants, hotels, streets, temples, or landmarks.
-
-At the end of your response, ALWAYS include 2-3 follow-up question suggestions that the user might want to ask next. Format them as:
+At the end of your response, ALWAYS include 2-3 follow-up questions that the user can directly send to you. These should be phrased as requests FROM the user's perspective. Format them as:
 [FOLLOWUP]
-- First follow-up question
-- Second follow-up question
-- Third follow-up question
+- What are the best restaurants for Day 1?
+- Add more cultural activities to the itinerary
+- What's the best way to get from the airport to the hotel?
 [/FOLLOWUP]
+
+Good examples: "Add a day trip option", "Suggest budget-friendly alternatives", "What should I pack for this trip?"
+Bad examples: "Would you like restaurant suggestions?", "Do you want me to add activities?", "Should I optimize the route?"
 
 Include city AND country with every place name for accurate searching.`;
 
@@ -140,8 +176,7 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
-    const messages = [
-      { role: 'system', content: systemPrompt },
+    const inputItems = [
       ...history.map((msg) => ({
         role: msg.role,
         content: msg.content,
@@ -149,13 +184,15 @@ app.post('/api/chat', async (req, res) => {
       { role: 'user', content: message },
     ];
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages,
-      max_completion_tokens: planningMode ? 2000 : 1000,
+    const response = await openai.responses.create({
+      model: 'gpt-5-mini',
+      instructions: systemPrompt,
+      input: inputItems,
+      max_output_tokens: planningMode ? 4000 : 2000,
+      reasoning: { effort: planningMode ? 'low' : 'minimal' }
     });
 
-    const assistantMessage = completion.choices[0].message.content;
+    const assistantMessage = response.output_text;
 
     let mapAction = null;
     const jsonMatch = assistantMessage.match(/\{[\s\S]*?"action"[\s\S]*?\}/);
@@ -175,44 +212,173 @@ app.post('/api/chat', async (req, res) => {
       const followUpText = followUpMatch[1];
       followUpSuggestions = followUpText
         .split('\n')
-        .map((line) => line.replace(/^-\s*/, '').trim())
+        .map((line) => line.replace(/^[\-\*]\s*/, '').trim())
         .filter((line) => line.length > 0 && !line.startsWith('['));
     }
 
     let placesByDay = null;
     let placesByTimePeriod = null;
+    let placesV2 = null;
     const placesMatch = assistantMessage.match(/\[PLACES\]([\s\S]*?)(\[\/PLACES\]|$)/);
     if (placesMatch) {
+      const placesText = placesMatch[1];
+      const trimmed = (placesText || '').trim();
+      const withoutFences = trimmed.replace(/```json|```/gi, '').trim();
+      const jsonStart = withoutFences.indexOf('{');
+      const jsonEnd = withoutFences.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        const jsonCandidate = withoutFences.slice(jsonStart, jsonEnd + 1);
+        try {
+          const parsed = JSON.parse(jsonCandidate);
+          if (parsed && parsed.version === 2) {
+            placesV2 = parsed;
+          }
+        } catch (e) {
+        }
+      }
+
       placesByDay = {};
       placesByTimePeriod = {};
-      const placesText = placesMatch[1];
-      placesText.split('\n').forEach(line => {
-        const timePeriodMatch = line.match(/Day\s*(\d+)\s*(Morning|Afternoon|Evening|Accommodation):\s*(.+)/i);
+
+      if (placesV2) {
+        const periodsOrder = ['Morning', 'Afternoon', 'Evening', 'Accommodation'];
+        if (Array.isArray(placesV2.days)) {
+          for (const day of placesV2.days) {
+            const dayKey = typeof day?.key === 'string' ? day.key.trim() : '';
+            if (!dayKey) continue;
+            if (!placesByDay[dayKey]) placesByDay[dayKey] = [];
+            if (!placesByTimePeriod[dayKey]) placesByTimePeriod[dayKey] = {};
+
+            const periods = day?.periods && typeof day.periods === 'object' ? day.periods : {};
+            for (const period of periodsOrder) {
+              const stops = Array.isArray(periods?.[period]) ? periods[period] : [];
+              if (!stops || stops.length === 0) continue;
+
+              const periodPlaces = [];
+              for (const stop of stops) {
+                const rawOptions = Array.isArray(stop?.options) ? stop.options : [];
+                const options = rawOptions.map((v) => String(v).trim()).filter(Boolean);
+                if (options.length === 0) continue;
+                const joined = options.join(' | ');
+                periodPlaces.push(stop?.optional ? `Optional: ${joined}` : joined);
+                placesByDay[dayKey].push(...options);
+              }
+
+              if (periodPlaces.length > 0) {
+                placesByTimePeriod[dayKey][period] = periodPlaces;
+              }
+            }
+
+            const suggested = Array.isArray(day?.suggested) ? day.suggested.map((v) => String(v).trim()).filter(Boolean) : [];
+            if (suggested.length > 0) {
+              placesByDay[dayKey].push(...suggested);
+            }
+
+            placesByDay[dayKey] = Array.from(new Set(placesByDay[dayKey]));
+          }
+        } else if (Array.isArray(placesV2.suggested)) {
+          const suggested = placesV2.suggested.map((v) => String(v).trim()).filter(Boolean);
+          if (suggested.length > 0) {
+            placesByDay['Suggested'] = Array.from(new Set(suggested));
+          }
+        }
+      } else {
+        let lastDayKey = null;
+        let lastPeriod = null;
+        trimmed.split('\n').forEach(line => {
+        const cleanedLine = (line || '').replace(/^[\-\*]\s*/, '').trim();
+        if (!cleanedLine) return;
+
+        // Match "Alternative:" or "Alternatively," format for alternatives
+        const altLineMatch = cleanedLine.match(/^(Alternative|Alt|Option|Alternatively)[,:\-]\s*(.+)$/i);
+        if (altLineMatch && lastDayKey && lastPeriod && placesByTimePeriod[lastDayKey]?.[lastPeriod]) {
+          // Extract place names from the alternative text (look for bold text or text before parentheses)
+          let altText = altLineMatch[2];
+          // Try to extract bold place names first
+          const boldMatches = altText.match(/\*\*([^*]+)\*\*/g);
+          let altPlaces = [];
+          if (boldMatches && boldMatches.length > 0) {
+            altPlaces = boldMatches.map(m => m.replace(/\*\*/g, '').trim()).filter(p => p);
+          } else {
+            // Fallback: split by comma or extract text before parentheses
+            altPlaces = altText
+              .split(',')
+              .map(p => p.replace(/\s*\([^)]*\)/g, '').trim())
+              .filter(p => p && p.length > 2);
+          }
+
+          if (altPlaces.length > 0) {
+            placesByTimePeriod[lastDayKey][lastPeriod].push(`Alternative: ${altPlaces.join(' | ')}`);
+            if (!placesByDay[lastDayKey]) placesByDay[lastDayKey] = [];
+            placesByDay[lastDayKey].push(...altPlaces);
+          }
+          return;
+        }
+
+        // Match "Day X Option A/B Period:" format (e.g., "Day 3 Option A Morning:")
+        const optionPeriodMatch = cleanedLine.match(/Day\s*(\d+)\s*Option\s*([A-Z])\s*(Morning|Afternoon|Evening|Accommodation):\s*(.+)/i);
+        if (optionPeriodMatch) {
+          const dayNum = optionPeriodMatch[1];
+          const option = optionPeriodMatch[2].toUpperCase();
+          const period = optionPeriodMatch[3];
+          const placesRaw = optionPeriodMatch[4];
+          const places = placesRaw.split(',').map(p => p.trim()).filter(p => p);
+          const dayKey = `Day ${dayNum} (Option ${option})`;
+
+          lastDayKey = dayKey;
+          lastPeriod = period;
+          
+          if (!placesByDay[dayKey]) placesByDay[dayKey] = [];
+          places.forEach(place => {
+            if (place.includes('|')) {
+              place.split('|').forEach(p => placesByDay[dayKey].push(p.trim()));
+            } else {
+              placesByDay[dayKey].push(place);
+            }
+          });
+          
+          if (!placesByTimePeriod[dayKey]) placesByTimePeriod[dayKey] = {};
+          placesByTimePeriod[dayKey][period] = places;
+          return;
+        }
+
+        const timePeriodMatch = cleanedLine.match(/Day\s*(\d+)\s*(Morning|Afternoon|Evening|Accommodation):\s*(.+)/i);
         if (timePeriodMatch) {
           const dayNum = timePeriodMatch[1];
           const period = timePeriodMatch[2];
-          const places = timePeriodMatch[3].split(',').map(p => p.trim()).filter(p => p);
+          const placesRaw = timePeriodMatch[3];
+          const places = placesRaw.split(',').map(p => p.trim()).filter(p => p);
           const dayKey = `Day ${dayNum}`;
 
+          lastDayKey = dayKey;
+          lastPeriod = period;
+
           if (!placesByDay[dayKey]) placesByDay[dayKey] = [];
-          placesByDay[dayKey].push(...places);
+          places.forEach(place => {
+            if (place.includes('|')) {
+              place.split('|').forEach(p => placesByDay[dayKey].push(p.trim()));
+            } else {
+              placesByDay[dayKey].push(place);
+            }
+          });
 
           if (!placesByTimePeriod[dayKey]) placesByTimePeriod[dayKey] = {};
           placesByTimePeriod[dayKey][period] = places;
           return;
         }
-        const dayMatch = line.match(/Day\s*(\d+):\s*(.+)/i);
+        const dayMatch = cleanedLine.match(/Day\s*(\d+):\s*(.+)/i);
         if (dayMatch) {
           const dayNum = dayMatch[1];
           const places = dayMatch[2].split(',').map(p => p.trim()).filter(p => p);
           placesByDay[`Day ${dayNum}`] = places;
         }
-        const suggestedMatch = line.match(/Suggested:\s*(.+)/i);
+        const suggestedMatch = cleanedLine.match(/Suggested:\s*(.+)/i);
         if (suggestedMatch) {
           const places = suggestedMatch[1].split(',').map(p => p.trim()).filter(p => p);
           placesByDay['Suggested'] = places;
         }
-      });
+        });
+      }
     }
 
     if (!placesByDay || Object.keys(placesByDay).length === 0) {
@@ -228,9 +394,24 @@ app.post('/api/chat', async (req, res) => {
         const boldMatches = content.match(/\*\*([^*]+)\*\*/g) || [];
         const places = boldMatches
           .map(m => m.replace(/\*\*/g, '').trim())
-          .filter(p => p.length > 2 && !p.match(/^(Morning|Afternoon|Evening|Tip|Travel|Note|Cuisine|Highlights|Distance)/i));
+          .filter(p => p.length > 2 && !p.match(/^(Morning|Afternoon|Evening|Tip|Travel|Note|Cuisine|Highlights|Distance|Option\s*[A-Z])/i));
         if (places.length > 0) {
           placesByDay[`Day ${dayNum}`] = places;
+        }
+        
+        // Also check for "Option A/B" format if no places found yet
+        if (places.length === 0) {
+          const optionMatches = content.matchAll(/Option\s*[A-Z][:\s]+([^\n(]+)/gi);
+          const optionPlaces = [];
+          for (const optMatch of optionMatches) {
+            const optPlace = optMatch[1].trim();
+            if (optPlace && optPlace.length > 2) {
+              optionPlaces.push(optPlace);
+            }
+          }
+          if (optionPlaces.length > 0) {
+            placesByDay[`Day ${dayNum}`] = optionPlaces;
+          }
         }
       }
 
@@ -278,6 +459,7 @@ app.post('/api/chat', async (req, res) => {
       followUpSuggestions,
       placesByDay,
       placesByTimePeriod,
+      placesV2,
       conversationId: convId,
     });
   } catch (error) {
@@ -346,22 +528,15 @@ app.post('/api/summarize-reviews', async (req, res) => {
       .map((r, i) => `Review ${i + 1} (${r.rating}/5 stars): ${r.text}`)
       .join('\n\n');
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful assistant that summarizes customer reviews. Provide a concise 2-3 sentence summary highlighting the main positives and negatives mentioned in the reviews. Be objective and balanced.',
-        },
-        {
-          role: 'user',
-          content: `Summarize these reviews for "${placeName}":\n\n${reviewsText}`,
-        },
-      ],
-      max_completion_tokens: 200,
+    const response = await openai.responses.create({
+      model: 'gpt-5-nano',
+      instructions: 'You are a helpful assistant that summarizes customer reviews. Provide a concise 2-3 sentence summary highlighting the main positives and negatives mentioned in the reviews. Be objective and balanced.',
+      input: `Summarize these reviews for "${placeName}":\n\n${reviewsText}`,
+      max_output_tokens: 1000,
+      reasoning: { effort: "minimal" }
     });
 
-    const summary = completion.choices[0].message.content;
+    const summary = response.output_text;
     res.json({ summary });
   } catch (error) {
     console.error('Review summary error:', error);

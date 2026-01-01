@@ -80,7 +80,7 @@ export async function getCurrentLocation(options?: {
 
         reject({ code, message } as GeolocationError);
       },
-      { enableHighAccuracy: false, timeout, maximumAge }
+      { enableHighAccuracy: true, timeout, maximumAge }
     );
   });
 }

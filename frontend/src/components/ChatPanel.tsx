@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Loader2, MapPin, Trash2, CalendarDays } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Send, Loader2, MapPin, Trash2, CalendarDays, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { MapAction, SearchHistory, SelectedPlace, PlaceData, Message, PlanningPreferences, TimePeriodPlaces } from '@/types';
+import type { MapAction, SearchHistory, SelectedPlace, PlaceData, Message, PlanningPreferences, TimePeriodPlaces, PlacesV2, PlacesV2Day } from '@/types';
 import { INTEREST_OPTIONS, TRAVEL_STYLES, DURATION_OPTIONS } from '@/types';
 import { API_URL, getRandomSuggestions } from '@/constants';
 import { ItineraryFlowchart } from './ItineraryFlowchart';
@@ -16,10 +16,10 @@ interface ChatPanelProps {
   searchHistory?: SearchHistory[];
   places?: PlaceData[];
   onClose?: () => void;
-  onShowFlowchart?: (data: { day: string; timePeriods: TimePeriodPlaces } | null) => void;
+  onShowFlowchart?: (data: { day: string; timePeriods?: TimePeriodPlaces; dayV2?: PlacesV2Day | null } | null) => void;
 }
 
-export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [], onClose, onShowFlowchart }: ChatPanelProps) {
+export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, onShowFlowchart }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,9 +33,45 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
   });
   const [localFlowchartData, setLocalFlowchartData] = useState<{
     day: string;
-    timePeriods: TimePeriodPlaces;
+    timePeriods?: TimePeriodPlaces;
+    dayV2?: PlacesV2Day | null;
   } | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedTimeRef = useRef(0); // Ref to capture final elapsed time
+  const startTimeRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Timer for elapsed time during loading
+  useEffect(() => {
+    if (isLoading) {
+      setElapsedTime(0);
+      elapsedTimeRef.current = 0;
+      startTimeRef.current = Date.now();
+      timerRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - (startTimeRef.current || Date.now())) / 1000);
+        setElapsedTime(elapsed);
+        elapsedTimeRef.current = elapsed;
+      }, 100); // Update more frequently for accuracy
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isLoading]);
+
+  const formatElapsedTime = useCallback((seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  }, []);
   
   // Use external flowchart handler if provided, otherwise use local state
   const setFlowchartData = onShowFlowchart || setLocalFlowchartData;
@@ -103,26 +139,84 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
 
       const data = await response.json();
 
+      const placesV2: PlacesV2 | null = (data?.placesV2 && typeof data.placesV2 === 'object') ? (data.placesV2 as PlacesV2) : null;
+
+      let derivedPlacesByDay: Record<string, string[]> | null = null;
+      let derivedPlacesByTimePeriod: Record<string, TimePeriodPlaces> | null = null;
+      if (placesV2 && placesV2.version === 2) {
+        derivedPlacesByDay = {};
+        derivedPlacesByTimePeriod = {};
+        const periodsOrder: Array<keyof TimePeriodPlaces> = ['Morning', 'Afternoon', 'Evening', 'Accommodation'];
+
+        if (Array.isArray(placesV2.days) && placesV2.days.length > 0) {
+          for (const day of placesV2.days) {
+            const dayKey = typeof day?.key === 'string' ? day.key.trim() : '';
+            if (!dayKey) continue;
+            if (!derivedPlacesByDay[dayKey]) derivedPlacesByDay[dayKey] = [];
+            if (!derivedPlacesByTimePeriod[dayKey]) derivedPlacesByTimePeriod[dayKey] = {};
+
+            const periods = day?.periods && typeof day.periods === 'object' ? day.periods : {};
+            for (const period of periodsOrder) {
+              const stops = Array.isArray((periods as Record<string, unknown>)[period]) ? (periods as Record<string, unknown>)[period] as unknown[] : [];
+              if (!stops || stops.length === 0) continue;
+
+              const periodPlaces: string[] = [];
+              for (const stop of stops) {
+                const rawOptions = Array.isArray((stop as { options?: unknown })?.options) ? (stop as { options?: unknown[] }).options as unknown[] : [];
+                const options = rawOptions.map((v) => String(v).trim()).filter(Boolean);
+                if (options.length === 0) continue;
+                const joined = options.join(' | ');
+                const isOptional = Boolean((stop as { optional?: unknown })?.optional);
+                periodPlaces.push(isOptional ? `Optional: ${joined}` : joined);
+                derivedPlacesByDay[dayKey].push(...options);
+              }
+
+              if (periodPlaces.length > 0) {
+                derivedPlacesByTimePeriod[dayKey][period] = periodPlaces;
+              }
+            }
+
+            const suggested = Array.isArray(day?.suggested)
+              ? day.suggested.map((v) => String(v).trim()).filter(Boolean)
+              : [];
+            if (suggested.length > 0) {
+              derivedPlacesByDay[dayKey].push(...suggested);
+            }
+
+            derivedPlacesByDay[dayKey] = Array.from(new Set(derivedPlacesByDay[dayKey]));
+          }
+        } else if (Array.isArray(placesV2.suggested) && placesV2.suggested.length > 0) {
+          const suggested = placesV2.suggested.map((v) => String(v).trim()).filter(Boolean);
+          if (suggested.length > 0) {
+            derivedPlacesByDay.Suggested = Array.from(new Set(suggested));
+          }
+        }
+
+        if (derivedPlacesByDay && Object.keys(derivedPlacesByDay).length === 0) derivedPlacesByDay = null;
+        if (derivedPlacesByTimePeriod && Object.keys(derivedPlacesByTimePeriod).length === 0) derivedPlacesByTimePeriod = null;
+      }
+
+      const resolvedPlacesByDay = (data?.placesByDay && Object.keys(data.placesByDay).length > 0)
+        ? (data.placesByDay as Record<string, string[]>)
+        : derivedPlacesByDay;
+      const resolvedPlacesByTimePeriod = (data?.placesByTimePeriod && Object.keys(data.placesByTimePeriod).length > 0)
+        ? (data.placesByTimePeriod as Record<string, TimePeriodPlaces>)
+        : derivedPlacesByTimePeriod;
+
       const assistantMessage: Message = {
         id: Date.now().toString() + '-assistant',
         role: 'assistant',
         content: data.message,
         map_action: data.mapAction,
         followUpSuggestions: data.followUpSuggestions,
-        placesByDay: data.placesByDay,
-        placesByTimePeriod: data.placesByTimePeriod,
+        placesByDay: resolvedPlacesByDay,
+        placesByTimePeriod: resolvedPlacesByTimePeriod,
+        placesV2,
+        responseTime: elapsedTimeRef.current || Math.floor((Date.now() - (startTimeRef.current || Date.now())) / 1000),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
       setConversationId(data.conversationId);
-
-      // Auto-trigger multiSearch when placesByDay is present
-      if (data.placesByDay && Object.keys(data.placesByDay).length > 0) {
-        const allPlaces = Object.values(data.placesByDay as Record<string, string[]>).flat();
-        if (allPlaces.length > 0) {
-          onMapAction({ action: 'multiSearch', queries: allPlaces });
-        }
-      }
     } catch (error) {
       console.error('Chat error:', error);
       setMessages((prev) => [
@@ -238,7 +332,7 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
       <div 
         className="absolute left-0 right-2 top-14 overflow-y-auto pb-6"
         ref={scrollRef}
-        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '150px' : '100px' }}
+        style={{ bottom: latestFollowUpSuggestions.length > 0 ? '190px' : '100px' }}
       >
         <div className="p-4">
           {messages.length === 0 ? (
@@ -398,22 +492,16 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
                               size="sm"
                               className="h-6 text-xs px-2"
                               onClick={() => {
-                                // Search for all places at once
-                                onMapAction({ action: 'multiSearch', queries: dayPlaces });
-                                // Open flowchart if time period data is available
-                                if (message.placesByTimePeriod?.[day]) {
+                                // Open flowchart to show itinerary (no API call)
+                                const dayV2 = message.placesV2?.days?.find((d) => (d.key || '').trim() === day) || null;
+                                if (dayV2 || message.placesByTimePeriod?.[day]) {
                                   setFlowchartData({
                                     day,
-                                    timePeriods: message.placesByTimePeriod[day],
+                                    timePeriods: message.placesByTimePeriod?.[day],
+                                    dayV2,
                                   });
                                   // On mobile, close chat to show the itinerary flowchart
                                   if (window.innerWidth < 768) {
-                                    onClose?.();
-                                  }
-                                } else {
-                                  // On mobile without flowchart data, show places list
-                                  if (window.innerWidth < 768) {
-                                    onViewPlaces?.();
                                     onClose?.();
                                   }
                                 }
@@ -424,6 +512,20 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
                             </Button>
                           ))}
                         </div>
+                        {/* Response time below places by day buttons */}
+                        {message.role === 'assistant' && message.responseTime !== undefined && message.responseTime > 0 && (
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70 pt-1">
+                            <Clock className="h-2.5 w-2.5" />
+                            Generated in {formatElapsedTime(message.responseTime)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* Response time for messages without places by day */}
+                    {message.role === 'assistant' && message.responseTime !== undefined && message.responseTime > 0 && (!message.placesByDay || Object.keys(message.placesByDay).length === 0) && (
+                      <div className="mt-2 pt-1.5 border-t border-border/30 flex items-center gap-1 text-[10px] text-muted-foreground/70">
+                        <Clock className="h-2.5 w-2.5" />
+                        Generated in {formatElapsedTime(message.responseTime)}
                       </div>
                     )}
                   </div>
@@ -431,8 +533,12 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="rounded-2xl bg-muted px-4 py-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="rounded-2xl bg-muted px-4 py-3 flex items-center gap-6">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      {formatElapsedTime(elapsedTime)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -487,14 +593,19 @@ export function ChatPanel({ onMapAction, selectedPlace, onViewPlaces, places = [
         <ItineraryFlowchart
           day={flowchartData.day}
           timePeriods={flowchartData.timePeriods}
+          dayV2={flowchartData.dayV2}
           places={places}
           onPlaceClick={(placeName) => {
-            onMapAction({ action: 'search', query: placeName });
-            // Close chat panel on mobile
+            // Use searchOne action for single result when clicking specific place
+            onMapAction({ action: 'searchOne', query: placeName });
+            // Close flowchart and chat panel on mobile
+            setFlowchartData(null);
             if (window.innerWidth < 768) onClose?.();
           }}
           onDirections={(action) => {
             onMapAction(action);
+            // Close flowchart to show directions on map
+            setFlowchartData(null);
             // Close chat panel on mobile
             if (window.innerWidth < 768) onClose?.();
           }}

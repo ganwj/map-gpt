@@ -407,6 +407,74 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
         }
         break;
 
+      case 'searchOne':
+        if (mapAction.query) {
+          // Search for a single place (used when clicking on specific place in itinerary)
+          (async () => {
+            try {
+              const { Place } = await google.maps.importLibrary('places') as google.maps.PlacesLibrary;
+              
+              const request = {
+                textQuery: mapAction.query!,
+                fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating', 'userRatingCount', 'types', 'photos', 'regularOpeningHours'],
+                maxResultCount: 1,
+              };
+
+              const { places } = await Place.searchByText(request);
+
+              if (places && places.length > 0 && places[0].location) {
+                clearMarkers();
+                const place = places[0];
+                const location = place.location!;
+                
+                addMarker(location.lat(), location.lng(), place.displayName || '', place.id);
+                map.setCenter(location);
+                map.setZoom(16);
+
+                let isOpen: boolean | undefined;
+                try {
+                  const isOpenResult = place.isOpen();
+                  isOpen = isOpenResult instanceof Promise ? undefined : isOpenResult;
+                } catch {
+                  isOpen = undefined;
+                }
+
+                const photoUrls: string[] = [];
+                if (place.photos && place.photos.length > 0) {
+                  try {
+                    const url = place.photos[0].getURI({ maxWidth: 400 });
+                    if (url) photoUrls.push(url);
+                  } catch {
+                    // Skip failed photo
+                  }
+                }
+
+                const placeData: PlaceData = {
+                  id: place.id || '',
+                  displayName: place.displayName || '',
+                  formattedAddress: place.formattedAddress || '',
+                  location: {
+                    lat: location.lat(),
+                    lng: location.lng(),
+                  },
+                  rating: place.rating ?? undefined,
+                  userRatingCount: place.userRatingCount ?? undefined,
+                  types: place.types,
+                  photoUrls,
+                  openingHours: place.regularOpeningHours ? {
+                    isOpen,
+                  } : undefined,
+                };
+
+                onPlacesFound?.([placeData], mapAction.query);
+              }
+            } catch (error) {
+              console.error('Error in searchOne:', error);
+            }
+          })();
+        }
+        break;
+
       case 'goto':
         if (mapAction.lat !== undefined && mapAction.lng !== undefined) {
           clearMarkers();
@@ -572,78 +640,6 @@ export function GoogleMap({ apiKey, mapAction, onPlaceSelect: _onPlaceSelect, on
                   destination: mapAction.destination!,
                   routes: validRoutes,
                 });
-                
-                // Search for origin and destination places to show in places list
-                try {
-                  const { Place } = await google.maps.importLibrary('places') as google.maps.PlacesLibrary;
-                  const placesData: PlaceData[] = [];
-                  
-                  // Search for origin (if not "My Location")
-                  if (typeof origin === 'string') {
-                    const originRequest = {
-                      textQuery: origin,
-                      fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating', 'userRatingCount', 'types', 'photos'],
-                      maxResultCount: 1,
-                    };
-                    const { places: originPlaces } = await Place.searchByText(originRequest);
-                    if (originPlaces && originPlaces[0]?.location) {
-                      const place = originPlaces[0];
-                      const loc = place.location!;
-                      const photoUrls: string[] = [];
-                      if (place.photos && place.photos.length > 0) {
-                        try {
-                          const url = place.photos[0].getURI({ maxWidth: 400 });
-                          if (url) photoUrls.push(url);
-                        } catch { /* Skip */ }
-                      }
-                      placesData.push({
-                        id: place.id || '',
-                        displayName: place.displayName || origin,
-                        formattedAddress: place.formattedAddress || '',
-                        location: { lat: loc.lat(), lng: loc.lng() },
-                        rating: place.rating ?? undefined,
-                        userRatingCount: place.userRatingCount ?? undefined,
-                        types: place.types,
-                        photoUrls,
-                      });
-                    }
-                  }
-                  
-                  // Search for destination
-                  const destRequest = {
-                    textQuery: mapAction.destination!,
-                    fields: ['id', 'displayName', 'formattedAddress', 'location', 'rating', 'userRatingCount', 'types', 'photos'],
-                    maxResultCount: 1,
-                  };
-                  const { places: destPlaces } = await Place.searchByText(destRequest);
-                  if (destPlaces && destPlaces[0]?.location) {
-                    const place = destPlaces[0];
-                    const loc = place.location!;
-                    const photoUrls: string[] = [];
-                    if (place.photos && place.photos.length > 0) {
-                      try {
-                        const url = place.photos[0].getURI({ maxWidth: 400 });
-                        if (url) photoUrls.push(url);
-                      } catch { /* Skip */ }
-                    }
-                    placesData.push({
-                      id: place.id || '',
-                      displayName: place.displayName || mapAction.destination!,
-                      formattedAddress: place.formattedAddress || '',
-                      location: { lat: loc.lat(), lng: loc.lng() },
-                      rating: place.rating ?? undefined,
-                      userRatingCount: place.userRatingCount ?? undefined,
-                      types: place.types,
-                      photoUrls,
-                    });
-                  }
-                  
-                  if (placesData.length > 0) {
-                    onPlacesFound?.(placesData);
-                  }
-                } catch (error) {
-                  console.error('Error fetching direction places:', error);
-                }
               }
             })
             .catch((error) => {

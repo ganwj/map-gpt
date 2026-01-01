@@ -171,4 +171,51 @@ describe('ChatPanel', () => {
 
     expect(screen.getByText('MapGPT')).toBeInTheDocument();
   });
+
+  it('should derive placesByDay from placesV2 and display day buttons', async () => {
+    (fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        message: 'Itinerary response',
+        mapAction: null,
+        followUpSuggestions: [],
+        conversationId: 'conv-1',
+        placesByDay: null,
+        placesByTimePeriod: null,
+        placesV2: {
+          version: 2,
+          days: [
+            {
+              key: 'Day 1',
+              periods: {
+                Morning: [
+                  { options: ['Senso-ji Temple Tokyo Japan'] },
+                  { options: ['Asakusa Shrine Tokyo Japan', 'Hoppy Street Tokyo Japan'] },
+                  { options: ['Nakamise Street Tokyo Japan'], optional: true },
+                ],
+              },
+              suggested: ['Ichiran Ramen Shibuya Tokyo Japan'],
+            },
+          ],
+        },
+      }),
+    });
+
+    render(
+      <ChatPanel
+        onMapAction={mockOnMapAction}
+      />
+    );
+
+    const input = screen.getByPlaceholderText('Ask about any place...');
+    fireEvent.change(input, { target: { value: 'Plan a day in Tokyo' } });
+
+    const sendButton = document.querySelector('[data-submit-btn]') as HTMLButtonElement;
+    fireEvent.click(sendButton);
+
+    await screen.findByText('Itinerary response');
+
+    // Should display day button with place count (no auto multiSearch)
+    expect(screen.getByText('Day 1 (5)')).toBeInTheDocument();
+  });
 });

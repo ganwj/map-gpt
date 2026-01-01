@@ -7,7 +7,7 @@ import { PlaceDetails } from '@/components/PlaceDetails';
 import { SearchBar } from '@/components/SearchBar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
-import type { MapAction, PlaceData, SelectedPlace, SearchHistory, DirectionResult, DirectionError, TimePeriodPlaces } from '@/types';
+import type { MapAction, PlaceData, SelectedPlace, SearchHistory, DirectionResult, DirectionError, TimePeriodPlaces, PlacesV2Day } from '@/types';
 import { ItineraryFlowchart } from '@/components/ItineraryFlowchart';
 import { GOOGLE_MAPS_API_KEY } from '@/constants';
 import { PlacesAutocomplete } from '@/components/PlacesAutocomplete';
@@ -40,7 +40,8 @@ function App() {
   const [mobileDirectionsPending, setMobileDirectionsPending] = useState(false);
   const [flowchartData, setFlowchartData] = useState<{
     day: string;
-    timePeriods: TimePeriodPlaces;
+    timePeriods?: TimePeriodPlaces;
+    dayV2?: PlacesV2Day | null;
   } | null>(null);
 
   const handleMapAction = useCallback((action: MapAction) => {
@@ -88,8 +89,15 @@ function App() {
   const handlePlaceDetailsLoaded = useCallback((place: PlaceData) => {
     setSelectedPlaceDetails(place);
     setPlaceIdToFetch(null);
-    // Add the place to placesList if not already present
-    setPlacesList([place]);
+    setPlacesList(prev => {
+      const idx = prev.findIndex(p => p.id === place.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...place };
+        return next;
+      }
+      return [place, ...prev];
+    });
     // On mobile, show places panel with details when marker is clicked
     if (window.innerWidth < 768) {
       setIsMobilePlacesOpen(true);
@@ -691,12 +699,14 @@ function App() {
           <ItineraryFlowchart
             day={flowchartData.day}
             timePeriods={flowchartData.timePeriods}
+            dayV2={flowchartData.dayV2}
             places={placesList}
             onPlaceClick={(placeName) => {
               handleMapAction({ action: 'search', query: placeName });
             }}
             onDirections={(action) => {
               handleMapAction(action);
+              setFlowchartData(null);
             }}
             onClose={() => setFlowchartData(null)}
           />

@@ -1,7 +1,7 @@
 // Shared types for the MapGPT application
 
 export interface MapAction {
-  action: 'search' | 'goto' | 'directions' | 'marker' | 'multiSearch';
+  action: 'search' | 'searchOne' | 'goto' | 'directions' | 'marker' | 'multiSearch';
   query?: string;
   queries?: string[];
   lat?: number;
@@ -54,6 +54,29 @@ export interface TimePeriodPlaces {
   Accommodation?: string[];
 }
 
+export interface PlacesV2Stop {
+  options: string[];
+  optional?: boolean;
+  travelTime?: string;
+}
+
+export interface PlacesV2Day {
+  key: string;
+  periods?: {
+    Morning?: PlacesV2Stop[];
+    Afternoon?: PlacesV2Stop[];
+    Evening?: PlacesV2Stop[];
+    Accommodation?: PlacesV2Stop[];
+  };
+  suggested?: string[];
+}
+
+export interface PlacesV2 {
+  version: 2;
+  days?: PlacesV2Day[];
+  suggested?: string[];
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -63,8 +86,10 @@ export interface Message {
   searchQuery?: string;
   placesByDay?: Record<string, string[]> | null;
   placesByTimePeriod?: Record<string, TimePeriodPlaces> | null;
+  placesV2?: PlacesV2 | null;
   isError?: boolean;
   failedMessage?: string;
+  responseTime?: number; // Time in seconds for AI to generate response
 }
 
 export interface PlanningPreferences {

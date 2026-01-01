@@ -220,7 +220,7 @@ export function PlaceDetails({ place, onClose, onGetDirections, directionError, 
     };
 
     fetchSummary();
-  }, [place?.id, place?.reviews, place?.displayName]);
+  }, [place?.id]);
 
   const starDistribution = useMemo(() => {
     if (!place?.reviews) return { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
