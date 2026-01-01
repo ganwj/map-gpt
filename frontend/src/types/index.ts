@@ -73,6 +73,7 @@ export interface PlacesDay {
     Evening?: PlacesStop[];
     Accommodation?: PlacesStop[];
   };
+  suggested?: string[];
 }
 
 // Renamed from PlacesV2 - simplified without version field

@@ -142,10 +142,10 @@ describe('ChatPanel', () => {
 
   it('should call onClose on mobile when clicking places by day button with flowchart data', () => {
     const mockOnClose = vi.fn();
-    
+
     // Mock window.innerWidth for mobile
     Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
-    
+
     render(
       <ChatPanel
         onMapAction={mockOnMapAction}
@@ -159,7 +159,7 @@ describe('ChatPanel', () => {
 
   it('should accept onShowFlowchart prop for external flowchart rendering', () => {
     const mockOnShowFlowchart = vi.fn();
-    
+
     render(
       <ChatPanel
         onMapAction={mockOnMapAction}
@@ -180,8 +180,7 @@ describe('ChatPanel', () => {
         conversationId: 'conv-1',
         placesByDay: null,
         placesByTimePeriod: null,
-        placesV2: {
-          version: 2,
+        places: {
           days: [
             {
               key: 'Day 1',

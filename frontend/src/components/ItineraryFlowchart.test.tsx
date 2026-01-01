@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ItineraryFlowchart } from './ItineraryFlowchart';
-import type { TimePeriodPlaces, PlaceData, PlacesV2Day } from '@/types';
+import type { TimePeriodPlaces, PlaceData, PlacesDay } from '@/types';
 
 const mockTimePeriods: TimePeriodPlaces = {
   Morning: ['Senso-ji Temple Tokyo Japan', 'Nakamise Street Tokyo Japan'],
@@ -29,7 +29,7 @@ const mockPlaces: PlaceData[] = [
   },
 ];
 
-const mockDayV2: PlacesV2Day = {
+const mockDayV2: PlacesDay = {
   key: 'Day 1',
   periods: {
     Morning: [
@@ -241,7 +241,7 @@ describe('ItineraryFlowchart', () => {
       <ItineraryFlowchart
         day="Day 1"
         timePeriods={legacyTimePeriods}
-        dayV2={mockDayV2}
+        placesDay={mockDayV2}
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
         onDirections={mockOnDirections}
@@ -257,7 +257,7 @@ describe('ItineraryFlowchart', () => {
     render(
       <ItineraryFlowchart
         day="Day 1"
-        dayV2={mockDayV2}
+        placesDay={mockDayV2}
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
         onDirections={mockOnDirections}
@@ -272,7 +272,7 @@ describe('ItineraryFlowchart', () => {
     render(
       <ItineraryFlowchart
         day="Day 1"
-        dayV2={mockDayV2}
+        placesDay={mockDayV2}
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
         onDirections={mockOnDirections}
@@ -285,7 +285,7 @@ describe('ItineraryFlowchart', () => {
   });
 
   it('should render Suggested section from v2 and not include directions buttons inside it', () => {
-    const dayV2WithTwoStops: PlacesV2Day = {
+    const dayV2WithTwoStops: PlacesDay = {
       key: 'Day 1',
       periods: {
         Morning: [
@@ -300,7 +300,7 @@ describe('ItineraryFlowchart', () => {
       <ItineraryFlowchart
         day="Day 1"
         timePeriods={{ Morning: ['Different Place Tokyo Japan'] }}
-        dayV2={dayV2WithTwoStops}
+        placesDay={dayV2WithTwoStops}
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
         onDirections={mockOnDirections}
@@ -319,7 +319,7 @@ describe('ItineraryFlowchart', () => {
   });
 
   it('should render period transition directions button for first stop of second period', () => {
-    const dayV2WithMultiplePeriods: PlacesV2Day = {
+    const dayV2WithMultiplePeriods: PlacesDay = {
       key: 'Day 1',
       periods: {
         Morning: [
@@ -335,7 +335,7 @@ describe('ItineraryFlowchart', () => {
     render(
       <ItineraryFlowchart
         day="Day 1"
-        dayV2={dayV2WithMultiplePeriods}
+        placesDay={dayV2WithMultiplePeriods}
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
         onDirections={mockOnDirections}

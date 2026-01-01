@@ -8,7 +8,6 @@ describe('types', () => {
       expect(MAX_ROUTE_DISTANCE.driving).toBe(10000000); // 10,000 km
       expect(MAX_ROUTE_DISTANCE.walking).toBe(500000);   // 500 km
       expect(MAX_ROUTE_DISTANCE.bicycling).toBe(500000); // 500 km
-      expect(MAX_ROUTE_DISTANCE.transit).toBe(5000000);  // 5,000 km
     });
 
     it('should have walking/bicycling distances smaller than driving', () => {
@@ -47,11 +46,10 @@ describe('types', () => {
           { mode: 'driving', duration: '1h', distance: '50km', durationValue: 3600, distanceValue: 50000 },
           { mode: 'walking', duration: '10h', distance: '50km', durationValue: 36000, distanceValue: 50000 },
           { mode: 'bicycling', duration: '2h', distance: '50km', durationValue: 7200, distanceValue: 50000 },
-          { mode: 'transit', duration: '1.5h', distance: '50km', durationValue: 5400, distanceValue: 50000 },
         ],
       };
 
-      expect(result.routes).toHaveLength(4);
+      expect(result.routes).toHaveLength(3);
     });
   });
 

@@ -176,6 +176,11 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
               }
             }
 
+            if (Array.isArray((day as any).suggested)) {
+              const daySuggested = ((day as any).suggested as unknown[]).map(v => String(v).trim()).filter(Boolean);
+              derivedPlacesByDay[dayKey].push(...daySuggested);
+            }
+
             derivedPlacesByDay[dayKey] = Array.from(new Set(derivedPlacesByDay[dayKey]));
           }
         } else if (Array.isArray(placesData.suggested) && placesData.suggested.length > 0) {
@@ -519,7 +524,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                             </div>
                             <p className="text-[10px] text-muted-foreground italic flex items-center gap-2 px-1">
                               <AlertCircle className="h-3 w-3" />
-                              Note: Place data may be unavailable or inaccurate.
+                              Note: Places shown may be inaccurate.
                             </p>
                           </div>
                         )}

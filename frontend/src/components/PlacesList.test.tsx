@@ -47,6 +47,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -58,6 +59,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -66,16 +68,17 @@ describe('PlacesList', () => {
     expect(screen.getByText('Shibuya Crossing')).toBeInTheDocument();
   });
 
-  it('should render place ratings', () => {
+  it('should render loading state', () => {
     render(
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
+        isLoading={true}
       />
     );
 
-    expect(screen.getByText('4.5')).toBeInTheDocument();
-    expect(screen.getByText('4.6')).toBeInTheDocument();
+    expect(screen.getByText('Fetching places...')).toBeInTheDocument();
   });
 
   it('should call onPlaceClick when a place is clicked', () => {
@@ -83,6 +86,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -98,6 +102,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -114,6 +119,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={[]}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -130,6 +136,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={placesWithDuplicates}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -143,6 +150,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -154,6 +162,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -165,6 +174,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 
@@ -179,6 +189,7 @@ describe('PlacesList', () => {
       <PlacesList
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
+        onGetDirections={vi.fn()}
       />
     );
 

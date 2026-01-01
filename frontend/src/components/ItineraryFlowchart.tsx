@@ -250,8 +250,8 @@ export function ItineraryFlowchart({ day, timePeriods, placesDay, places, onPlac
     return buildPeriodStops('Accommodation');
   }, [placesDay, timePeriods]);
 
-  // Suggested places removed - no longer in PlacesDay
-  const suggestedPlaces: string[] = [];
+  // Suggested places from placesDay
+  const suggestedPlaces: string[] = Array.isArray(placesDay?.suggested) ? (placesDay.suggested as string[]) : [];
 
   const nonEmptyPeriods = activityPeriods.filter(p => (stopsByPeriod[p]?.length ?? 0) > 0);
   const totalStops = Object.values(stopsByPeriod).reduce((acc, stops) => acc + stops.length, 0) + accommodationStops.length;
