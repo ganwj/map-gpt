@@ -20,7 +20,7 @@ Try now at https://map-gpt-weld.vercel.app/
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
 - **Backend**: Express.js, Node.js
 - **Database**: Supabase (PostgreSQL)
-- **AI**: OpenAI GPT-4o-mini
+- **AI**: OpenAI GPT-5-mini
 - **Maps**: Google Maps JavaScript API
 
 ## Prerequisites
