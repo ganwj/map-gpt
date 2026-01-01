@@ -12,13 +12,12 @@ import { ItineraryFlowchart } from './ItineraryFlowchart';
 interface ChatPanelProps {
   onMapAction: (action: MapAction) => void;
   selectedPlace?: SelectedPlace | null;
-  onViewPlaces?: () => void;
   places?: PlaceData[];
   onClose?: () => void;
   onShowFlowchart?: (data: { day: string; timePeriods?: TimePeriodPlaces; dayV2?: PlacesV2Day | null } | null) => void;
 }
 
-export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, onShowFlowchart, onViewPlaces }: ChatPanelProps) {
+export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, onShowFlowchart }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -216,9 +215,6 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
 
       setMessages((prev) => [...prev, assistantMessage]);
       setConversationId(data.conversationId);
-
-      // Don't automatically trigger map actions from chatbot responses
-      // Users will manually trigger actions by clicking on places or buttons
     } catch (error) {
       console.error('Chat error:', error);
       setMessages((prev) => [
@@ -502,9 +498,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                                     timePeriods: message.placesByTimePeriod?.[day],
                                     dayV2,
                                   });
-                                  // Show places panel
-                                  onViewPlaces?.();
-                                  // On mobile, close chat to show the itinerary flowchart
+
                                   if (window.innerWidth < 768) {
                                     onClose?.();
                                   }

@@ -335,7 +335,10 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
                         return (
                           <div key={stopIdx} className="relative">
                             {/* Main Place Card */}
-                            <div className="pt-4">
+                            <div className={cn(
+                              "pt-4 px-2",
+                              isFirstStop && "mb-4"
+                            )}>
                               <div className="flex items-start gap-3">
                                 {/* Step Number */}
                                 <div className={cn(
@@ -352,7 +355,8 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
                                       onPlaceClick(cleanPlaceName(selected));
                                       onClose();
                                     }}
-                                    className="w-full text-left"
+                                    className="w-full text-left" 
+                                    style={{ pointerEvents: 'auto' }}
                                   >
                                     <div className="flex items-center gap-2">
                                       <p className="font-semibold text-base line-clamp-2">

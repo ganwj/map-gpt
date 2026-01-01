@@ -71,12 +71,6 @@ function App() {
       }
       return [place, ...prev];
     });
-    // On mobile, show places panel with details when marker is clicked
-    if (window.innerWidth < 768) {
-      setIsMobilePlacesOpen(true);
-      setIsChatOpen(false);
-      setIsMobileDirectionsOpen(false);
-    }
   }, []);
 
   const handlePlaceClick = useCallback((place: PlaceData) => {
@@ -241,10 +235,6 @@ function App() {
               onMapAction={handleMapAction} 
               selectedPlace={selectedPlace}
               places={placesList}
-              onViewPlaces={() => {
-                setIsPlacesListCollapsed(false);
-                setSelectedPlaceDetails(null);
-              }}
               onShowFlowchart={setFlowchartData}
             />
           </div>
@@ -272,12 +262,6 @@ function App() {
               onMapAction={handleMapAction} 
               selectedPlace={selectedPlace}
               places={placesList}
-              onViewPlaces={() => {
-                setIsPlacesListCollapsed(false);
-                setSelectedPlaceDetails(null);
-                setIsMobilePlacesOpen(true);
-                setIsChatOpen(false);
-              }}
               onClose={() => setIsChatOpen(false)}
               onShowFlowchart={setFlowchartData}
             />
