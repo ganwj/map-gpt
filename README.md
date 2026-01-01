@@ -1,6 +1,6 @@
 # MapGPT
 
-An interactive Google Maps application with AI chatbot capabilities. Ask questions about locations, get directions, plan trips, and discover places around the world.
+An interactive OpenStreetMap application with AI chatbot capabilities. Ask questions about locations, get directions, plan trips, and discover places around the world.
 
 [![Application Image](https://i.postimg.cc/23R6zrH2/Screenshot_2025_12_26_035419.png)](https://postimg.cc/SYdqdFbM)
 
@@ -10,8 +10,8 @@ Try now at https://map-gpt-weld.vercel.app/
 
 - **AI-Powered Chat**: Natural language interface to interact with the map
 - **Location Search**: Find any place, address, or point of interest
-- **Directions**: Get driving, walking, cycling, and transit directions between locations, tap to open Google Maps navigation
-- **Place Discovery**: Discover restaurants, hotels, attractions, and more, with photos, ratings, and summary
+- **Directions**: Get driving, walking, and cycling directions between locations, tap to open Google Maps navigation
+- **Place Discovery**: Discover restaurants, hotels, attractions, and more
 - **Trip Planning Mode**: Plan multi-day itineraries with time-period organization (Morning, Afternoon, Evening)
 - **Itinerary Flowchart**: Visual flowchart view of daily itineraries with quick directions between places
   
@@ -21,12 +21,12 @@ Try now at https://map-gpt-weld.vercel.app/
 - **Backend**: Express.js, Node.js
 - **Database**: Supabase (PostgreSQL)
 - **AI**: OpenAI GPT-5-mini
-- **Maps**: Google Maps JavaScript API
+- **Maps**: OpenStreetMap with React Leaflet, OpenRouteService (routing), Nominatim (geocoding)
 
 ## Prerequisites
 
 - Node.js 18+
-- Google Maps API Key (with Places API enabled)
+- OpenRouteService API Key (free at [openrouteservice.org](https://openrouteservice.org/dev/#/signup))
 - OpenAI API Key
 - Supabase account
 
@@ -66,7 +66,7 @@ npm install
 Create `.env` file and add the below variables:
 
 ```env
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+VITE_OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key_here
 VITE_API_URL=http://localhost:3001
 ```
 
@@ -80,17 +80,12 @@ The frontend will run on http://localhost:5173
 
 ## Getting API Keys
 
-### Google Maps API Key
+### OpenRouteService API Key (Free)
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the following APIs:
-   - Maps JavaScript API
-   - Places API
-   - Directions API
-   - Geocoding API
-4. Create credentials (API Key)
-5. Restrict the API key to your domain for production
+1. Go to [OpenRouteService](https://openrouteservice.org/dev/#/signup)
+2. Create a free account
+3. Generate an API key from your dashboard
+4. Free tier includes 2,000 directions requests/day
 
 ### OpenAI API Key
 

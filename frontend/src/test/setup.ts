@@ -1,45 +1,41 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// Mock Google Maps API
-const mockGoogle = {
-  maps: {
-    Map: vi.fn(),
-    Marker: vi.fn(),
-    Geocoder: vi.fn(() => ({
-      geocode: vi.fn(),
-    })),
-    DirectionsService: vi.fn(() => ({
-      route: vi.fn(),
-    })),
-    DirectionsRenderer: vi.fn(() => ({
-      setMap: vi.fn(),
-      setDirections: vi.fn(),
-      set: vi.fn(),
-    })),
-    DirectionsStatus: {
-      OK: 'OK',
-      NOT_FOUND: 'NOT_FOUND',
-      ZERO_RESULTS: 'ZERO_RESULTS',
+// Mock Leaflet for testing
+vi.mock('react-leaflet', () => ({
+  MapContainer: vi.fn(({ children }) => children),
+  TileLayer: vi.fn(() => null),
+  Marker: vi.fn(({ children }) => children),
+  Popup: vi.fn(({ children }) => children),
+  Polyline: vi.fn(() => null),
+  useMap: vi.fn(() => ({
+    setView: vi.fn(),
+    panTo: vi.fn(),
+    getCenter: vi.fn(() => ({ lat: 40.7128, lng: -74.006 })),
+    fitBounds: vi.fn(),
+  })),
+}));
+
+vi.mock('leaflet', () => ({
+  default: {
+    Icon: {
+      Default: {
+        prototype: {},
+        mergeOptions: vi.fn(),
+      },
     },
-    TravelMode: {
-      DRIVING: 'DRIVING',
-      WALKING: 'WALKING',
-      BICYCLING: 'BICYCLING',
-      TRANSIT: 'TRANSIT',
-    },
-    LatLngBounds: vi.fn(),
-    importLibrary: vi.fn(),
-    marker: {
-      AdvancedMarkerElement: vi.fn(),
+    divIcon: vi.fn(() => ({})),
+    latLngBounds: vi.fn(() => ({})),
+  },
+  Icon: {
+    Default: {
+      prototype: {},
+      mergeOptions: vi.fn(),
     },
   },
-};
-
-Object.defineProperty(window, 'google', {
-  value: mockGoogle,
-  writable: true,
-});
+  divIcon: vi.fn(() => ({})),
+  latLngBounds: vi.fn(() => ({})),
+}));
 
 // Mock geolocation
 const mockGeolocation = {
@@ -79,3 +75,6 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 });
+
+// Mock fetch for nominatim/routing tests
+globalThis.fetch = vi.fn();

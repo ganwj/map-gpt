@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { MapAction, SelectedPlace, PlaceData, Message, PlanningPreferences, TimePeriodPlaces, PlacesV2, PlacesV2Day } from '@/types';
+import type { MapAction, SelectedPlace, PlaceData, Message, PlanningPreferences, TimePeriodPlaces, Places, PlacesDay } from '@/types';
 import { INTEREST_OPTIONS, TRAVEL_STYLES, DURATION_OPTIONS } from '@/types';
 import { API_URL, getRandomSuggestions } from '@/constants';
 import { ItineraryFlowchart } from './ItineraryFlowchart';
@@ -14,7 +14,7 @@ interface ChatPanelProps {
   selectedPlace?: SelectedPlace | null;
   places?: PlaceData[];
   onClose?: () => void;
-  onShowFlowchart?: (data: { day: string; timePeriods?: TimePeriodPlaces; dayV2?: PlacesV2Day | null } | null) => void;
+  onShowFlowchart?: (data: { day: string; timePeriods?: TimePeriodPlaces; placesDay?: PlacesDay | null } | null) => void;
 }
 
 export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, onShowFlowchart }: ChatPanelProps) {
@@ -32,7 +32,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
   const [localFlowchartData, setLocalFlowchartData] = useState<{
     day: string;
     timePeriods?: TimePeriodPlaces;
-    dayV2?: PlacesV2Day | null;
+    placesDay?: PlacesDay | null;
   } | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -70,12 +70,12 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   }, []);
-  
+
   // Use external flowchart handler if provided, otherwise use local state
   const setFlowchartData = onShowFlowchart || setLocalFlowchartData;
   const flowchartData = onShowFlowchart ? null : localFlowchartData;
   const initialSuggestions = useMemo(() => getRandomSuggestions(3), []);
-  
+
   const toggleInterest = (interest: string) => {
     setPlanningPrefs(prev => ({
       ...prev,
@@ -84,7 +84,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
         : [...prev.interests, interest]
     }));
   };
-  
+
   const planningSuggestions = [
     'Plan a 3-day trip to Paris',
     'Create an itinerary for Tokyo',
@@ -137,17 +137,18 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
 
       const data = await response.json();
 
-      const placesV2: PlacesV2 | null = (data?.placesV2 && typeof data.placesV2 === 'object') ? (data.placesV2 as PlacesV2) : null;
+      // Use places from API response (renamed from placesV2)
+      const placesData: Places | null = (data?.places && typeof data.places === 'object') ? (data.places as Places) : null;
 
       let derivedPlacesByDay: Record<string, string[]> | null = null;
       let derivedPlacesByTimePeriod: Record<string, TimePeriodPlaces> | null = null;
-      if (placesV2 && placesV2.version === 2) {
+      if (placesData) {
         derivedPlacesByDay = {};
         derivedPlacesByTimePeriod = {};
         const periodsOrder: Array<keyof TimePeriodPlaces> = ['Morning', 'Afternoon', 'Evening', 'Accommodation'];
 
-        if (Array.isArray(placesV2.days) && placesV2.days.length > 0) {
-          for (const day of placesV2.days) {
+        if (Array.isArray(placesData.days) && placesData.days.length > 0) {
+          for (const day of placesData.days) {
             const dayKey = typeof day?.key === 'string' ? day.key.trim() : '';
             if (!dayKey) continue;
             if (!derivedPlacesByDay[dayKey]) derivedPlacesByDay[dayKey] = [];
@@ -174,17 +175,10 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
               }
             }
 
-            const suggested = Array.isArray(day?.suggested)
-              ? day.suggested.map((v) => String(v).trim()).filter(Boolean)
-              : [];
-            if (suggested.length > 0) {
-              derivedPlacesByDay[dayKey].push(...suggested);
-            }
-
             derivedPlacesByDay[dayKey] = Array.from(new Set(derivedPlacesByDay[dayKey]));
           }
-        } else if (Array.isArray(placesV2.suggested) && placesV2.suggested.length > 0) {
-          const suggested = placesV2.suggested.map((v) => String(v).trim()).filter(Boolean);
+        } else if (Array.isArray(placesData.suggested) && placesData.suggested.length > 0) {
+          const suggested = placesData.suggested.map((v) => String(v).trim()).filter(Boolean);
           if (suggested.length > 0) {
             derivedPlacesByDay.Suggested = Array.from(new Set(suggested));
           }
@@ -209,7 +203,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
         followUpSuggestions: data.followUpSuggestions,
         placesByDay: resolvedPlacesByDay,
         placesByTimePeriod: resolvedPlacesByTimePeriod,
-        placesV2,
+        places: placesData,
         responseTime: elapsedTimeRef.current || Math.floor((Date.now() - (startTimeRef.current || Date.now())) / 1000),
       };
 
@@ -308,8 +302,8 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
           <h2 className="font-semibold">MapGPT</h2>
         </div>
         <div className="flex items-center gap-1">
-          <Button 
-            variant={isPlanningMode ? "default" : "ghost"} 
+          <Button
+            variant={isPlanningMode ? "default" : "ghost"}
             size="sm"
             onClick={() => setIsPlanningMode(!isPlanningMode)}
             title={isPlanningMode ? "Exit planning mode" : "Plan a trip"}
@@ -327,7 +321,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
       </div>
 
       {/* Scrollable Chat Body - positioned between header and footer */}
-      <div 
+      <div
         className="absolute left-0 right-2 top-14 overflow-y-auto pb-6"
         ref={scrollRef}
         style={{ bottom: latestFollowUpSuggestions.length > 0 ? '190px' : '100px' }}
@@ -342,7 +336,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                     <h3 className="text-lg font-medium">Plan Your Trip</h3>
                     <p className="text-xs text-muted-foreground">Set your preferences below</p>
                   </div>
-                  
+
                   {/* Duration */}
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Duration</label>
@@ -353,8 +347,8 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                           onClick={() => setPlanningPrefs(p => ({ ...p, duration: d }))}
                           className={cn(
                             "text-xs px-2 py-1 rounded-full border transition-colors",
-                            planningPrefs.duration === d 
-                              ? "bg-primary text-primary-foreground border-primary" 
+                            planningPrefs.duration === d
+                              ? "bg-primary text-primary-foreground border-primary"
                               : "bg-background hover:bg-accent"
                           )}
                         >
@@ -374,8 +368,8 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                           onClick={() => toggleInterest(i)}
                           className={cn(
                             "text-xs px-2 py-1 rounded-full border transition-colors",
-                            planningPrefs.interests.includes(i) 
-                              ? "bg-primary text-primary-foreground border-primary" 
+                            planningPrefs.interests.includes(i)
+                              ? "bg-primary text-primary-foreground border-primary"
                               : "bg-background hover:bg-accent"
                           )}
                         >
@@ -395,8 +389,8 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                           onClick={() => setPlanningPrefs(p => ({ ...p, travelStyle: s }))}
                           className={cn(
                             "text-xs px-2 py-1 rounded-full border transition-colors",
-                            planningPrefs.travelStyle === s 
-                              ? "bg-primary text-primary-foreground border-primary" 
+                            planningPrefs.travelStyle === s
+                              ? "bg-primary text-primary-foreground border-primary"
                               : "bg-background hover:bg-accent"
                           )}
                         >
@@ -490,18 +484,15 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                               size="sm"
                               className="h-6 text-xs px-2"
                               onClick={() => {
-                                // Open flowchart to show itinerary (no API call)
-                                const dayV2 = message.placesV2?.days?.find((d) => (d.key || '').trim() === day) || null;
-                                if (dayV2 || message.placesByTimePeriod?.[day]) {
-                                  setFlowchartData({
-                                    day,
-                                    timePeriods: message.placesByTimePeriod?.[day],
-                                    dayV2,
-                                  });
+                                // Search all places at once to add markers and to places list
+                                const queries = dayPlaces || [];
+                                if (queries.length > 0) {
+                                  onMapAction({ action: 'searchMany', queries });
+                                }
 
-                                  if (window.innerWidth < 768) {
-                                    onClose?.();
-                                  }
+                                // Close chat on mobile
+                                if (window.innerWidth < 768) {
+                                  onClose?.();
                                 }
                               }}
                             >
@@ -551,15 +542,19 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
         {latestFollowUpSuggestions.length > 0 && (
           <div className="px-3 py-2 bg-muted/30 border-t">
             <div className="flex flex-wrap gap-1.5">
-              {latestFollowUpSuggestions.map((suggestion, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setInput(suggestion)}
-                  className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-accent transition-colors text-left"
-                >
-                  {suggestion}
-                </button>
-              ))}
+              {latestFollowUpSuggestions.map((suggestion, idx) => {
+                // Strip markdown asterisks from suggestion text
+                const cleanSuggestion = suggestion.replace(/\*\*/g, '');
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setInput(cleanSuggestion)}
+                    className="text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-accent transition-colors text-left"
+                  >
+                    {cleanSuggestion}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -585,13 +580,13 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
           </div>
         </div>
       </div>
-      
+
       {/* Itinerary Flowchart Modal */}
       {flowchartData && (
         <ItineraryFlowchart
           day={flowchartData.day}
           timePeriods={flowchartData.timePeriods}
-          dayV2={flowchartData.dayV2}
+          placesDay={flowchartData.placesDay}
           places={places}
           onPlaceClick={(placeName) => {
             // Use searchOne action for single result when clicking specific place

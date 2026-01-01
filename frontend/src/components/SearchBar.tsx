@@ -13,16 +13,46 @@ interface SearchBarProps {
   onClearDirectionError?: () => void;
   directionsSuccess?: boolean;
   onDirectionsSuccessHandled?: () => void;
+  // External control props
+  showDirections?: boolean;
+  onShowDirectionsChange?: (show: boolean) => void;
+  externalDestination?: string;
 }
 
-export function SearchBar({ onSearch, onGetDirections, directionError, onClearDirectionError, directionsSuccess, onDirectionsSuccessHandled }: SearchBarProps) {
+export function SearchBar({
+  onSearch,
+  onGetDirections,
+  directionError,
+  onClearDirectionError,
+  directionsSuccess,
+  onDirectionsSuccessHandled,
+  showDirections: controlledShowDirections,
+  onShowDirectionsChange,
+  externalDestination
+}: SearchBarProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDirections, setShowDirections] = useState(false);
+  const [internalShowDirections, setInternalShowDirections] = useState(false);
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [originError, setOriginError] = useState('');
   const [destinationError, setDestinationError] = useState('');
+
+  const showDirections = controlledShowDirections !== undefined ? controlledShowDirections : internalShowDirections;
+  const setShowDirections = (val: boolean) => {
+    if (onShowDirectionsChange) {
+      onShowDirectionsChange(val);
+    } else {
+      setInternalShowDirections(val);
+    }
+  };
+
+  // Sync external destination
+  useEffect(() => {
+    if (externalDestination) {
+      setDestination(externalDestination);
+    }
+  }, [externalDestination]);
 
   // Clear direction error when switching modes or starting new directions
   useEffect(() => {
@@ -73,7 +103,7 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
     }
 
     let finalOrigin = origin.trim();
-    
+
     // If no origin provided, try to get current location
     if (!finalOrigin) {
       setIsLoadingLocation(true);

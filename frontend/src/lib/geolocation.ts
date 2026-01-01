@@ -1,4 +1,5 @@
 // Geolocation utilities
+import { reverseGeocode } from './nominatim';
 
 export interface GeolocationError {
   code: 'PERMISSION_DENIED' | 'POSITION_UNAVAILABLE' | 'TIMEOUT' | 'NOT_SUPPORTED';
@@ -12,14 +13,14 @@ export interface GeolocationResult {
 }
 
 /**
- * Get the current user location with optional reverse geocoding
+ * Get the current user location with optional reverse geocoding (using Nominatim)
  */
 export async function getCurrentLocation(options?: {
   reverseGeocode?: boolean;
   timeout?: number;
   maximumAge?: number;
 }): Promise<GeolocationResult> {
-  const { reverseGeocode = true, timeout = 15000, maximumAge = 300000 } = options || {};
+  const { reverseGeocode: doReverseGeocode = true, timeout = 15000, maximumAge = 300000 } = options || {};
 
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -33,17 +34,14 @@ export async function getCurrentLocation(options?: {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        
+
         let address: string | undefined;
-        
-        if (reverseGeocode && window.google?.maps?.Geocoder) {
+
+        if (doReverseGeocode) {
           try {
-            const geocoder = new google.maps.Geocoder();
-            const response = await geocoder.geocode({
-              location: { lat: latitude, lng: longitude },
-            });
-            if (response.results[0]) {
-              address = response.results[0].formatted_address;
+            const result = await reverseGeocode(latitude, longitude);
+            if (result) {
+              address = result.display_name;
             }
           } catch {
             // Geocoding failed, continue without address

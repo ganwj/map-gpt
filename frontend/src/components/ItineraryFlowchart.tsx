@@ -4,12 +4,12 @@ import { Sunrise, Sun, Sunset, Hotel, ChevronRight, X, Calendar, Star, ArrowRigh
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { TimePeriodPlaces, PlaceData, MapAction, PlacesV2Day, PlacesV2Stop } from '@/types';
+import type { TimePeriodPlaces, PlaceData, MapAction, PlacesDay, PlacesStop } from '@/types';
 
 interface ItineraryFlowchartProps {
   day: string;
   timePeriods?: TimePeriodPlaces;
-  dayV2?: PlacesV2Day | null;
+  placesDay?: PlacesDay | null;
   places: PlaceData[];
   directionSummaries?: Record<string, { mode: 'driving' | 'walking' | 'bicycling' | 'transit'; duration: string; distance: string }>;
   onPlaceClick: (placeName: string) => void;
@@ -27,7 +27,7 @@ const TIME_PERIOD_CONFIG = {
 
 type TimePeriodKey = keyof typeof TIME_PERIOD_CONFIG;
 
-export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceClick, onDirections, onClose }: Omit<ItineraryFlowchartProps, 'directionSummaries' | 'onRequestTravelTime'>) {
+export function ItineraryFlowchart({ day, timePeriods, placesDay, places, onPlaceClick, onDirections, onClose }: Omit<ItineraryFlowchartProps, 'directionSummaries' | 'onRequestTravelTime'>) {
   const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState<Record<string, number>>({});
 
   const cleanPlaceName = (placeName: string) => {
@@ -102,12 +102,12 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
 
       // Exact match after normalization
       if (normalizedDisplayName === needle) score += 100;
-      
+
       // Check if display name is contained in the itinerary place name (common case)
       // e.g., "Senso-ji Temple" in "Senso-ji Temple Tokyo Japan"
       if (displayName && cleanedName.includes(displayName)) score += 80;
       if (displayName && cleanedName.startsWith(displayName)) score += 20;
-      
+
       // Partial match
       if (normalizedDisplayName.includes(needle) || needle.includes(normalizedDisplayName)) score += 50;
       if (normalizedAddr.includes(needle) || needle.includes(normalizedAddr)) score += 10;
@@ -120,22 +120,22 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
   };
 
   type Stop = { options: string[]; isOptional: boolean; isSuggestion: boolean; travelTime?: string };
-  
+
   // Check if text is NOT a visitable place (travel info, tips, etc.)
   const isNonPlace = (text: string): boolean => {
     const lower = text.toLowerCase();
     return /^(travel time|tip:|tips:|note:|practical tip|book|reservations?)/i.test(lower) ||
-           /^\d+[-–]\d+\s*(min|hour|km|m\b)/i.test(lower) ||
-           /^(metro|bus|walk|train)\s*(from|to)/i.test(lower);
+      /^\d+[-–]\d+\s*(min|hour|km|m\b)/i.test(lower) ||
+      /^(metro|bus|walk|train)\s*(from|to)/i.test(lower);
   };
-  
+
   // Check if a place is a suggestion (restaurants, accommodations recommendations)  
   const isSuggestionPlace = (text: string): boolean => {
     const lower = text.toLowerCase();
     return /^(luxury|mid-range|budget|dining option|restaurant suggestion|hotel suggestion)/i.test(lower) ||
-           /accommodation suggestion/i.test(lower);
+      /accommodation suggestion/i.test(lower);
   };
-  
+
   // Clean symbols from place names
   const cleanSymbols = (text: string): string => {
     return text
@@ -144,23 +144,23 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
       .replace(/\s+/g, ' ')  // Normalize spaces
       .trim();
   };
-  
+
   const buildStops = (periodPlaces: string[]): Stop[] => {
     const stops: Stop[] = [];
     for (const raw of periodPlaces) {
       const trimmed = cleanSymbols((raw || '').trim());
       if (!trimmed) continue;
-      
+
       // Skip non-place items like travel time info, tips
       if (isNonPlace(trimmed)) continue;
 
       // Check if optional - handle "Optional:" or "- Optional:" patterns
       const isOptional = /^[-–]?\s*optional\s*[:\-]/i.test(trimmed);
       const withoutOptional = trimmed.replace(/^[-–]?\s*optional\s*[:\-]\s*/i, '').trim();
-      
+
       // Check if suggestion
       const isSuggestion = isSuggestionPlace(withoutOptional);
-      
+
       const withoutPrefix = withoutOptional.replace(/^\s*(alternative|alternatively|alt|option)[,:\-]\s*/i, '').trim();
       const isAlt = /^\s*(alternative|alternatively|alt|option)[,:\-]/i.test(withoutOptional);
 
@@ -170,7 +170,7 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
         // Check for pattern like "Dinner at X or Y" or "Dinner in the area: X, or Y"
         const orMatch = withoutPrefix.match(/^(.+?)\s+at\s+(.+?),?\s+or\s+(.+)$/i);
         const areaMatch = withoutPrefix.match(/^(.+?)\s+(?:in|at)\s+(?:the\s+)?(.+?)\s+area[:\s]+(.+?),?\s+or\s+(.+)$/i);
-        
+
         if (areaMatch) {
           const [, prefix, , place1, place2] = areaMatch;
           inlineAlternatives = [`${prefix} at ${place1}`.trim(), `${prefix} at ${place2}`.trim()];
@@ -193,7 +193,7 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
         continue;
       }
 
-      stops.push({ 
+      stops.push({
         options: inlineAlternatives.length > 0 ? inlineAlternatives : [withoutPrefix],
         isOptional,
         isSuggestion,
@@ -206,9 +206,9 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
   // Separate Accommodation from regular time periods
   const activityPeriods: TimePeriodKey[] = ['Morning', 'Afternoon', 'Evening'];
   const buildPeriodStops = (period: TimePeriodKey): Stop[] => {
-    const v2Periods = dayV2?.periods && typeof dayV2.periods === 'object' ? dayV2.periods : null;
+    const v2Periods = placesDay?.periods && typeof placesDay.periods === 'object' ? placesDay.periods : null;
     const v2Stops = Array.isArray((v2Periods as Record<string, unknown> | null)?.[period])
-      ? ((v2Periods as Record<string, unknown>)[period] as PlacesV2Stop[])
+      ? ((v2Periods as Record<string, unknown>)[period] as PlacesStop[])
       : null;
 
     if (v2Stops && v2Stops.length > 0) {
@@ -217,9 +217,9 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
         const rawOptions = Array.isArray(stop?.options) ? stop.options : [];
         const options = rawOptions.map((v) => String(v).trim()).filter(Boolean);
         if (options.length === 0) continue;
-        stops.push({ 
-          options, 
-          isOptional: Boolean(stop?.optional), 
+        stops.push({
+          options,
+          isOptional: Boolean(stop?.optional),
           isSuggestion: false,
           travelTime: stop?.travelTime || undefined
         });
@@ -243,18 +243,15 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
       }
     }
     return result;
-  }, [dayV2, timePeriods]);
+  }, [placesDay, timePeriods]);
 
   // Accommodation stops (separate section, no directions)
   const accommodationStops = useMemo(() => {
     return buildPeriodStops('Accommodation');
-  }, [dayV2, timePeriods]);
+  }, [placesDay, timePeriods]);
 
-  const suggestedPlaces = useMemo(() => {
-    const suggested = dayV2?.suggested;
-    const raw = Array.isArray(suggested) ? suggested : [];
-    return raw.map((v) => String(v).trim()).filter(Boolean);
-  }, [dayV2]);
+  // Suggested places removed - no longer in PlacesDay
+  const suggestedPlaces: string[] = [];
 
   const nonEmptyPeriods = activityPeriods.filter(p => (stopsByPeriod[p]?.length ?? 0) > 0);
   const totalStops = Object.values(stopsByPeriod).reduce((acc, stops) => acc + stops.length, 0) + accommodationStops.length;
@@ -319,7 +316,7 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
                         const hasAlternatives = stop.options.length > 1;
                         // const selectedPlaceData = findPlaceData(selected); // Unused after removing ratings and types
                         const displayName = stripLocationSuffix(selected) || cleanPlaceName(selected);
-                        
+
                         // Check if there's a next stop for connector (unused after changing directions logic)
                         // const nextStop = periodStops[stopIdx + 1];
                         // const hasNextStop = !!nextStop;
@@ -355,7 +352,7 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
                                       onPlaceClick(cleanPlaceName(selected));
                                       onClose();
                                     }}
-                                    className="w-full text-left" 
+                                    className="w-full text-left"
                                     style={{ pointerEvents: 'auto' }}
                                   >
                                     <div className="flex items-center gap-2">
@@ -474,7 +471,7 @@ export function ItineraryFlowchart({ day, timePeriods, dayV2, places, onPlaceCli
                     </div>
                   </div>
 
-                                  </div>
+                </div>
               );
             })}
 

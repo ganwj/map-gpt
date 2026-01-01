@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { Star, MapPin, ChevronRight, ImageOff, Search, X } from 'lucide-react';
+import { MapPin, ChevronRight, Search, X, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -12,32 +12,19 @@ interface PlacesListProps {
   selectedPlaceId?: string | null;
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  onGetDirections: (place: PlaceData) => void;
 }
 
-function PlaceImage({ place }: { place: PlaceData }) {
-  const [error, setError] = useState(false);
-  
-  const photoUrl = place.photoUrls && place.photoUrls.length > 0 ? place.photoUrls[0] : null;
 
-  if (!photoUrl || error) {
-    return (
-      <div className="w-24 h-24 rounded-xl bg-muted/50 border border-border flex items-center justify-center flex-shrink-0">
-        <ImageOff className="h-6 w-6 text-muted-foreground/60" />
-      </div>
-    );
-  }
 
-  return (
-    <img
-      src={photoUrl}
-      alt={place.displayName}
-      className="w-24 h-24 rounded-xl object-cover flex-shrink-0 bg-muted"
-      onError={() => setError(true)}
-    />
-  );
-}
-
-export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed: controlledCollapsed, onCollapsedChange }: PlacesListProps) {
+export function PlacesList({
+  places,
+  onPlaceClick,
+  onGetDirections,
+  selectedPlaceId,
+  isCollapsed: controlledCollapsed,
+  onCollapsedChange
+}: PlacesListProps) {
   const [width, setWidth] = useState<number>(PANEL_DIMENSIONS.DEFAULT_WIDTH);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -53,11 +40,11 @@ export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed:
       seen.add(key);
       return true;
     });
-    
+
     if (!searchQuery.trim()) return uniquePlaces;
-    
+
     const query = searchQuery.toLowerCase();
-    return uniquePlaces.filter(place => 
+    return uniquePlaces.filter(place =>
       place.displayName.toLowerCase().includes(query) ||
       place.formattedAddress?.toLowerCase().includes(query) ||
       place.types?.some(t => t.toLowerCase().includes(query))
@@ -114,16 +101,15 @@ export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed:
   }
 
   return (
-    <div 
+    <div
       ref={panelRef}
       className="hidden sm:flex border-l bg-background flex-col h-full flex-shrink-0 relative"
       style={{ width: `${width}px` }}
     >
       {/* Resize handle - full height, wider hit area */}
       <div
-        className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/20 transition-colors z-10 ${
-          isResizing ? 'bg-primary/30' : ''
-        }`}
+        className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/20 transition-colors z-10 ${isResizing ? 'bg-primary/30' : ''
+          }`}
         onMouseDown={startResize}
       />
       {/* Visual indicator line */}
@@ -173,45 +159,56 @@ export function PlacesList({ places, onPlaceClick, selectedPlaceId, isCollapsed:
         ) : (
           <div className="p-3">
             {filteredPlaces.map((place, index) => (
-              <button
+              <div
                 key={`${place.id}-${index}`}
-                onClick={() => onPlaceClick(place)}
-                className={`w-full text-left p-4 rounded-xl mb-3 transition-colors hover:bg-accent border ${
-                  selectedPlaceId === place.id ? 'bg-accent border-primary' : 'border-transparent'
-                }`}
+                className={`w-full group p-4 rounded-xl mb-3 transition-colors hover:bg-accent border ${selectedPlaceId === place.id ? 'bg-accent border-primary' : 'border-transparent hover:border-border'
+                  }`}
               >
-                <div className="flex gap-4">
-                  <PlaceImage place={place} />
-                  <div className="flex-1 min-w-0 py-1">
-                    <h4 className="font-semibold text-base truncate">{place.displayName}</h4>
-                    {place.types && (
-                      <p className="text-sm text-muted-foreground capitalize truncate mt-0.5">
-                        {place.types[0]?.replace(/_/g, ' ')}
-                      </p>
-                    )}
-                    {place.rating && (
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{place.rating}</span>
-                        {place.userRatingCount && (
-                          <span className="text-sm text-muted-foreground">
-                            ({place.userRatingCount.toLocaleString()})
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {place.openingHours && (
-                      <p
-                        className={`text-sm mt-1.5 font-medium ${
-                          place.openingHours.isOpen ? 'text-green-600' : 'text-red-600'
-                        }`}
+                <div className="flex gap-3 items-start">
+                  {/* Location icon - clickable to view on map */}
+                  <button
+                    onClick={() => onPlaceClick(place)}
+                    className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+                  >
+                    <MapPin className="h-5 w-5 text-primary" />
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => onPlaceClick(place)}
+                      className="w-full text-left"
+                    >
+                      <h4 className="font-semibold text-base truncate">{place.displayName}</h4>
+                      {place.formattedAddress && (
+                        <p className="text-sm text-muted-foreground truncate mt-0.5">
+                          {place.formattedAddress}
+                        </p>
+                      )}
+                      {place.types && (
+                        <p className="text-xs text-muted-foreground capitalize mt-1">
+                          {place.types[0]?.replace(/_/g, ' ')}
+                        </p>
+                      )}
+                    </button>
+
+                    {/* Get Directions Button */}
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 text-xs w-full bg-background border hover:bg-primary hover:text-primary-foreground group-hover:border-primary/50 transition-all font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onGetDirections(place);
+                        }}
                       >
-                        {place.openingHours.isOpen ? 'Open now' : 'Closed'}
-                      </p>
-                    )}
+                        <Navigation className="h-3.5 w-3.5 mr-1.5" />
+                        Get Directions
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}

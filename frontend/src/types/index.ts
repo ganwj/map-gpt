@@ -1,8 +1,9 @@
 // Shared types for the MapGPT application
 
 export interface MapAction {
-  action: 'searchOne' | 'goto' | 'directions' | 'marker';
+  action: 'searchOne' | 'searchMany' | 'goto' | 'directions' | 'marker';
   query?: string;
+  queries?: string[];
   lat?: number;
   lng?: number;
   zoom?: number;
@@ -53,26 +54,27 @@ export interface TimePeriodPlaces {
   Accommodation?: string[];
 }
 
-export interface PlacesV2Stop {
+// Renamed from PlacesV2Stop
+export interface PlacesStop {
   options: string[];
   optional?: boolean;
   travelTime?: string;
 }
 
-export interface PlacesV2Day {
+// Renamed from PlacesV2Day
+export interface PlacesDay {
   key: string;
   periods?: {
-    Morning?: PlacesV2Stop[];
-    Afternoon?: PlacesV2Stop[];
-    Evening?: PlacesV2Stop[];
-    Accommodation?: PlacesV2Stop[];
+    Morning?: PlacesStop[];
+    Afternoon?: PlacesStop[];
+    Evening?: PlacesStop[];
+    Accommodation?: PlacesStop[];
   };
-  suggested?: string[];
 }
 
-export interface PlacesV2 {
-  version: 2;
-  days?: PlacesV2Day[];
+// Renamed from PlacesV2 - simplified without version field
+export interface Places {
+  days?: PlacesDay[];
   suggested?: string[];
 }
 
@@ -85,7 +87,7 @@ export interface Message {
   searchQuery?: string;
   placesByDay?: Record<string, string[]> | null;
   placesByTimePeriod?: Record<string, TimePeriodPlaces> | null;
-  placesV2?: PlacesV2 | null;
+  places?: Places | null; // Renamed from placesV2
   isError?: boolean;
   failedMessage?: string;
   responseTime?: number; // Time in seconds for AI to generate response
@@ -108,7 +110,7 @@ export interface DirectionResult {
   origin: string;
   destination: string;
   routes: {
-    mode: 'driving' | 'walking' | 'bicycling' | 'transit';
+    mode: 'driving' | 'walking' | 'bicycling'; // transit not supported by OpenRouteService
     duration: string;
     distance: string;
     durationValue: number; // seconds
@@ -124,10 +126,9 @@ export interface DirectionError {
   destination?: string;
 }
 
-// Max route distance in meters (e.g., 5000 km for walking/bicycling)
+// Max route distance in meters
 export const MAX_ROUTE_DISTANCE = {
   driving: 10000000, // 10,000 km
   walking: 500000,   // 500 km
   bicycling: 500000, // 500 km
-  transit: 5000000,  // 5,000 km
 } as const;

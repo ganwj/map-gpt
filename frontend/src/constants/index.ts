@@ -1,7 +1,6 @@
 // Application constants
 
 export const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3001');
-export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 // Panel dimensions
 export const PANEL_DIMENSIONS = {
