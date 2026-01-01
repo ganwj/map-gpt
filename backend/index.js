@@ -201,7 +201,6 @@ app.post('/api/chat', async (req, res) => {
       model: 'gpt-5-mini',
       instructions: systemPrompt,
       input: inputItems,
-      max_output_tokens: planningMode ? 4000 : 2000,
       reasoning: { effort: planningMode ? 'low' : 'minimal' }
     });
 
@@ -568,7 +567,6 @@ app.post('/api/summarize-reviews', async (req, res) => {
       model: 'gpt-5-nano',
       instructions: 'You are a helpful assistant that summarizes customer reviews. Provide a concise 2-3 sentence summary highlighting the main positives and negatives mentioned in the reviews. Be objective and balanced.',
       input: `Summarize these reviews for "${placeName}":\n\n${reviewsText}`,
-      max_output_tokens: 1000,
       reasoning: { effort: "minimal" }
     });
 
