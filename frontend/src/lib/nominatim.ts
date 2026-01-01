@@ -55,6 +55,8 @@ export async function searchPlaces(
   options?: {
     limit?: number;
     countryCode?: string;
+    viewbox?: string;
+    bounded?: boolean;
   }
 ): Promise<NominatimSearchResult[]> {
   const limit = options?.limit ?? 5;
@@ -68,6 +70,14 @@ export async function searchPlaces(
 
   if (options?.countryCode) {
     params.set('countrycodes', options.countryCode);
+  }
+
+  if (options?.viewbox) {
+    params.set('viewbox', options.viewbox);
+  }
+
+  if (options?.bounded) {
+    params.set('bounded', '1');
   }
 
   try {

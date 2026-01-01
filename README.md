@@ -42,10 +42,11 @@ npm install
 Create `.env` file and add the below variables:
 
 ```env
-DATABASE_URL=your_supabase_postgres_url_here
-SUPABASE_URL=your_supabase_url_here
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-OPENAI_API_KEY=your_openai_api_key_here
+DATABASE_URL=your_supabase_postgres_url
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+OPENAI_API_KEY=your_openai_api_key
+OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 ```
 
 Start the backend server:
@@ -66,8 +67,7 @@ npm install
 Create `.env` file and add the below variables:
 
 ```env
-VITE_OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key_here
-VITE_API_URL=http://localhost:3001
+VITE_OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 ```
 
 Start the frontend development server:

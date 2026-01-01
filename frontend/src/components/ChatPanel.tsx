@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Send, Loader2, MapPin, Trash2, CalendarDays, Clock } from 'lucide-react';
+import { Send, Loader2, MapPin, Trash2, CalendarDays, Clock, Navigation, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { API_URL, getRandomSuggestions } from '@/constants';
 import { ItineraryFlowchart } from './ItineraryFlowchart';
 
 interface ChatPanelProps {
-  onMapAction: (action: MapAction) => void;
+  onMapAction: (action: MapAction) => void | Promise<void>;
   selectedPlace?: SelectedPlace | null;
   places?: PlaceData[];
   onClose?: () => void;
@@ -21,6 +21,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isPlanningMode, setIsPlanningMode] = useState(false);
   const [planningPrefs, setPlanningPrefs] = useState<PlanningPreferences>({
@@ -472,49 +473,94 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                         Retry
                       </Button>
                     )}
-                    {/* Places by day for planning mode */}
-                    {message.placesByDay && Object.keys(message.placesByDay).length > 0 && (
-                      <div className="mt-3 pt-2 border-t border-border/50 space-y-2">
-                        <p className="text-xs text-muted-foreground font-medium">View suggested places:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {Object.entries(message.placesByDay).map(([day, dayPlaces]) => (
+                    {/* Message Actions (Suggested Places, Show Route, etc.) */}
+                    {(message.role === 'assistant') && (
+                      <div className="mt-3 space-y-3">
+                        {/* Suggested Places */}
+                        {message.placesByDay && Object.keys(message.placesByDay).length > 0 && (
+                          <div className="pt-2 border-t border-border/50 space-y-2">
+                            <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5 px-1">
+                              Visit suggested places:
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {Object.entries(message.placesByDay).map(([day, dayPlaces]) => {
+                                const actionId = `${message.id}-suggested-${day}`;
+
+                                // Deduplicate places to avoid mismatch between count and results
+                                const uniquePlaces = Array.from(new Set(dayPlaces || []));
+
+                                return (
+                                  <Button
+                                    key={day}
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs p-3 bg-background hover:bg-primary hover:text-primary-foreground border shrink-0 font-medium rounded-xl shadow-sm hover:shadow transition-all"
+                                    disabled={actionLoadingId !== null}
+                                    onClick={async () => {
+                                      if (uniquePlaces.length > 0) {
+                                        setActionLoadingId(actionId);
+                                        try {
+                                          await onMapAction({ action: 'searchMany', queries: uniquePlaces });
+                                          // Close chat on mobile
+                                          if (window.innerWidth < 768) {
+                                            onClose?.();
+                                          }
+                                        } finally {
+                                          setActionLoadingId(null);
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <MapPin className="mr-2 h-4 w-4" />
+                                    {day} ({uniquePlaces.length})
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground italic flex items-center gap-2 px-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Note: Place data may be unavailable or inaccurate.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Directions Button */}
+                        {message.map_action?.action === 'directions' && (
+                          <div className="pt-2 border-t border-border/50">
                             <Button
-                              key={day}
                               variant="outline"
                               size="sm"
-                              className="h-6 text-xs px-2"
-                              onClick={() => {
-                                // Search all places at once to add markers and to places list
-                                const queries = dayPlaces || [];
-                                if (queries.length > 0) {
-                                  onMapAction({ action: 'searchMany', queries });
-                                }
-
-                                // Close chat on mobile
-                                if (window.innerWidth < 768) {
-                                  onClose?.();
+                              className="h-7 text-xs p-3 bg-background hover:bg-primary hover:text-primary-foreground border shrink-0 font-medium rounded-xl shadow-sm hover:shadow transition-all"
+                              disabled={actionLoadingId !== null}
+                              onClick={async () => {
+                                if (message.map_action) {
+                                  const actionId = `${message.id}-directions`;
+                                  setActionLoadingId(actionId);
+                                  try {
+                                    await onMapAction(message.map_action);
+                                    // Close chat on mobile
+                                    if (window.innerWidth < 768) {
+                                      onClose?.();
+                                    }
+                                  } finally {
+                                    setActionLoadingId(null);
+                                  }
                                 }
                               }}
                             >
-                              <MapPin className="mr-1 h-3 w-3" />
-                              {day} ({dayPlaces.length})
+                              <Navigation className="mr-2 h-4 w-4" />
+                              Show Route
                             </Button>
-                          ))}
-                        </div>
-                        {/* Response time below places by day buttons */}
-                        {message.role === 'assistant' && message.responseTime !== undefined && message.responseTime > 0 && (
-                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70 pt-1">
+                          </div>
+                        )}
+
+                        {/* Response Metadata (Response Time) */}
+                        {message.responseTime !== undefined && message.responseTime > 0 && (
+                          <div className="pt-1.5 border-t border-border/30 flex items-center gap-1 text-[10px] text-muted-foreground/70">
                             <Clock className="h-2.5 w-2.5" />
                             Generated in {formatElapsedTime(message.responseTime)}
                           </div>
                         )}
-                      </div>
-                    )}
-                    {/* Response time for messages without places by day */}
-                    {message.role === 'assistant' && message.responseTime !== undefined && message.responseTime > 0 && (!message.placesByDay || Object.keys(message.placesByDay).length === 0) && (
-                      <div className="mt-2 pt-1.5 border-t border-border/30 flex items-center gap-1 text-[10px] text-muted-foreground/70">
-                        <Clock className="h-2.5 w-2.5" />
-                        Generated in {formatElapsedTime(message.responseTime)}
                       </div>
                     )}
                   </div>

@@ -8,7 +8,7 @@ import { MAP_DEFAULTS } from '@/constants';
 import { getCurrentLocation } from '@/lib/geolocation';
 import { Button } from '@/components/ui/button';
 import { searchPlaces, nominatimToPlaceData } from '@/lib/nominatim';
-import { getAllDirections, geocodeAddress, type RouteResult } from '@/lib/routing';
+import { getAllDirections, type RouteResult } from '@/lib/routing';
 
 // Fix Leaflet default marker icon issue
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -43,6 +43,7 @@ interface OpenStreetMapProps {
     onPlaceDetailsLoaded?: (place: PlaceData) => void;
     onDirectionsResult?: (result: DirectionResult) => void;
     onDirectionsError?: (error: DirectionError) => void;
+    onSearchResults?: (places: PlaceData[]) => void;
     placeIdToFetch?: string | null;
     resizeTrigger?: any; // To trigger map.invalidateSize()
 }
@@ -55,6 +56,7 @@ function MapController({
     onDirectionsResult,
     onDirectionsError,
     onPlaceDetailsLoaded,
+    onSearchResults,
     resizeTrigger,
 }: {
     mapAction?: MapAction | null;
@@ -65,6 +67,7 @@ function MapController({
     onDirectionsResult?: (result: DirectionResult) => void;
     onDirectionsError?: (error: DirectionError) => void;
     onPlaceDetailsLoaded?: (place: PlaceData) => void;
+    onSearchResults?: (places: PlaceData[]) => void;
     resizeTrigger?: any;
 }) {
     const map = useMap();
@@ -90,7 +93,15 @@ function MapController({
                 case 'searchOne':
                     if (mapAction.query) {
                         try {
-                            const results = await searchPlaces(mapAction.query, { limit: 1 });
+                            const bounds = map.getBounds();
+                            const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
+
+                            const results = await searchPlaces(mapAction.query, {
+                                limit: 1,
+                                viewbox,
+                                bounded: false // Bias only, don't strictly limit
+                            });
+
                             if (results.length > 0) {
                                 const place = nominatimToPlaceData(results[0]);
                                 const position: [number, number] = [place.location!.lat, place.location!.lng];
@@ -100,6 +111,7 @@ function MapController({
                                 map.setView(position, 16);
 
                                 onPlaceDetailsLoaded?.(place);
+                                onSearchResults?.([place]);
                             }
                         } catch (error) {
                             console.error('Search error:', error);
@@ -110,22 +122,34 @@ function MapController({
                 case 'searchMany':
                     if (mapAction.queries && mapAction.queries.length > 0) {
                         try {
-                            const allResults = await Promise.all(
-                                mapAction.queries.map(q => searchPlaces(q, { limit: 1 }))
-                            );
-
                             const newMarkers: Array<{ position: [number, number]; title?: string; id?: string }> = [];
                             const bounds = L.latLngBounds([]);
+                            const mapBounds = map.getBounds();
+                            const viewbox = `${mapBounds.getWest()},${mapBounds.getNorth()},${mapBounds.getEast()},${mapBounds.getSouth()}`;
+                            const foundPlaces: PlaceData[] = [];
 
-                            allResults.forEach((results) => {
-                                if (results.length > 0) {
-                                    const place = nominatimToPlaceData(results[0]);
-                                    const position: [number, number] = [place.location!.lat, place.location!.lng];
-                                    newMarkers.push({ position, title: place.displayName, id: place.id });
-                                    bounds.extend(position);
-                                    onPlaceDetailsLoaded?.(place);
+                            // Process queries sequentially with delay to avoid Nominatim rate limits
+                            for (const query of mapAction.queries) {
+                                try {
+                                    const results = await searchPlaces(query, {
+                                        limit: 1,
+                                        viewbox,
+                                        bounded: false // Bias only
+                                    });
+                                    if (results.length > 0) {
+                                        const place = nominatimToPlaceData(results[0]);
+                                        foundPlaces.push(place);
+                                        const position: [number, number] = [place.location!.lat, place.location!.lng];
+                                        newMarkers.push({ position, title: place.displayName, id: place.id });
+                                        bounds.extend(position);
+                                        onPlaceDetailsLoaded?.(place);
+                                    }
+                                    // Small delay between requests
+                                    await new Promise(resolve => setTimeout(resolve, 300));
+                                } catch (err) {
+                                    console.error(`Error searching for ${query}:`, err);
                                 }
-                            });
+                            }
 
                             if (newMarkers.length > 0) {
                                 setMarkers(newMarkers);
@@ -135,6 +159,9 @@ function MapController({
                                 } else {
                                     map.fitBounds(bounds, { padding: [50, 50] });
                                 }
+
+                                // No longer redundant: use the foundPlaces we already collected
+                                onSearchResults?.(foundPlaces);
                             }
                         } catch (error) {
                             console.error('Search many error:', error);
@@ -165,42 +192,36 @@ function MapController({
                         setMarkers([]);
 
                         try {
-                            // Resolve origin
-                            let originCoords: { lat: number; lng: number } | null = null;
-                            if (mapAction.origin.toLowerCase() === 'my location') {
-                                try {
-                                    const location = await getCurrentLocation({ reverseGeocode: false });
-                                    originCoords = { lat: location.latitude, lng: location.longitude };
-                                } catch {
-                                    // Fallback to map center
-                                    const center = map.getCenter();
-                                    originCoords = { lat: center.lat, lng: center.lng };
-                                }
-                            } else {
-                                originCoords = await geocodeAddress(mapAction.origin);
-                            }
+                            // Resolve origin and destination using searchPlaces for full data
+                            const [originResults, destResults] = await Promise.all([
+                                mapAction.origin.toLowerCase() === 'my location'
+                                    ? getCurrentLocation({ reverseGeocode: true }).then(loc => [{
+                                        place_id: 0,
+                                        display_name: loc.address || 'My Location',
+                                        lat: loc.latitude.toString(),
+                                        lon: loc.longitude.toString(),
+                                        type: 'location',
+                                        class: 'user'
+                                    }])
+                                    : searchPlaces(mapAction.origin, { limit: 1 }),
+                                searchPlaces(mapAction.destination, { limit: 1 })
+                            ]);
 
-                            if (!originCoords) {
+                            const originPlace = originResults.length > 0 ? nominatimToPlaceData(originResults[0] as any) : null;
+                            const destPlace = destResults.length > 0 ? nominatimToPlaceData(destResults[0] as any) : null;
+
+                            if (!originPlace || !destPlace) {
                                 onDirectionsError?.({
                                     type: 'INVALID_REQUEST',
-                                    message: 'Could not find the starting location.',
+                                    message: !originPlace ? 'Could not find the starting location.' : 'Could not find the destination.',
                                     origin: mapAction.origin,
                                     destination: mapAction.destination,
                                 });
                                 return;
                             }
 
-                            // Resolve destination
-                            const destCoords = await geocodeAddress(mapAction.destination);
-                            if (!destCoords) {
-                                onDirectionsError?.({
-                                    type: 'INVALID_REQUEST',
-                                    message: 'Could not find the destination.',
-                                    origin: mapAction.origin,
-                                    destination: mapAction.destination,
-                                });
-                                return;
-                            }
+                            const originCoords = { lat: originPlace.location!.lat, lng: originPlace.location!.lng };
+                            const destCoords = { lat: destPlace.location!.lat, lng: destPlace.location!.lng };
 
                             // Get all routes
                             const routes = await getAllDirections(originCoords, destCoords);
@@ -243,8 +264,8 @@ function MapController({
 
                             // Add origin and destination markers
                             setMarkers([
-                                { position: [originCoords.lat, originCoords.lng], title: 'Start' },
-                                { position: [destCoords.lat, destCoords.lng], title: 'End' },
+                                { position: [originCoords.lat, originCoords.lng], title: originPlace.displayName, id: originPlace.id },
+                                { position: [destCoords.lat, destCoords.lng], title: destPlace.displayName, id: destPlace.id },
                             ]);
 
                             // Fit map to route bounds
@@ -257,6 +278,8 @@ function MapController({
                             onDirectionsResult?.({
                                 origin: mapAction.origin,
                                 destination: mapAction.destination,
+                                originPlace,
+                                destinationPlace: destPlace,
                                 routes: validRoutes.map((r: RouteResult) => ({
                                     mode: r.mode,
                                     duration: r.duration,
@@ -276,11 +299,13 @@ function MapController({
                         }
                     }
                     break;
+                default:
+                    break;
             }
         };
 
         handleAction();
-    }, [mapAction, map, setMarkers, setRouteGeometry, onDirectionsResult, onDirectionsError, onPlaceDetailsLoaded]);
+    }, [mapAction, map, setMarkers, setRouteGeometry, onDirectionsResult, onDirectionsError, onPlaceDetailsLoaded, onSearchResults]);
 
     return null;
 }
@@ -291,6 +316,7 @@ export function OpenStreetMap({
     onPlaceDetailsLoaded,
     onDirectionsResult,
     onDirectionsError,
+    onSearchResults,
     placeIdToFetch: _placeIdToFetch,
     resizeTrigger,
 }: OpenStreetMapProps) {
@@ -343,6 +369,7 @@ export function OpenStreetMap({
                     onDirectionsResult={onDirectionsResult}
                     onDirectionsError={onDirectionsError}
                     onPlaceDetailsLoaded={onPlaceDetailsLoaded}
+                    onSearchResults={onSearchResults}
                     resizeTrigger={resizeTrigger}
                 />
 

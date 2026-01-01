@@ -40,9 +40,38 @@ function App() {
     placesDay?: PlacesDay | null;
   } | null>(null);
 
+  const [isActionPending, setIsActionPending] = useState(false);
+
+  // Ref to resolve promises returned by handleMapAction
+  const actionResolverRef = useRef<(() => void) | null>(null);
+
   const handleMapAction = useCallback((action: MapAction) => {
+    // Resolve any previous pending action
+    if (actionResolverRef.current) {
+      actionResolverRef.current();
+    }
+
+    setIsActionPending(true);
+
+    // Clear places list for search-related actions
+    if (action.action === 'searchOne' || action.action === 'searchMany') {
+      setPlacesList([]);
+
+      // Auto-expand places list when searching many (e.g., from "Suggested" button)
+      if (action.action === 'searchMany') {
+        setIsPlacesListCollapsed(false);
+        if (window.innerWidth < 768) {
+          setIsMobilePlacesOpen(true);
+        }
+      }
+    }
     // Add timestamp to force re-trigger even if same action
     setMapAction({ ...action, _timestamp: Date.now() } as MapAction);
+
+    // Return a promise that resolves when the action is complete
+    return new Promise<void>((resolve) => {
+      actionResolverRef.current = resolve;
+    });
   }, []);
 
   const handlePlaceSelect = useCallback((place: PlaceData) => {
@@ -108,7 +137,8 @@ function App() {
 
   const handleSearchBarDirections = useCallback((origin: string, destination: string) => {
     setSearchBarDirectionError(null);
-    setDirectionResult(null);
+    // Don't clear directionResult here to prevent auto-closing the panel.
+    // It will be replaced when the new result arrives.
     setLastDirectionSource('searchBar');
     setMapAction({
       action: 'directions',
@@ -122,6 +152,45 @@ function App() {
     setSearchBarDirectionError(null);
     setDirectionResult(result);
     setDirectionsSuccess(true);
+
+    // Auto-expand places list
+    setIsPlacesListCollapsed(false);
+
+    // On mobile, show places sheet
+    if (window.innerWidth < 768) {
+      setIsMobilePlacesOpen(true);
+    }
+
+    // Add origin and destination to places list
+    if (result.originPlace && result.destinationPlace) {
+      setPlacesList([result.originPlace, result.destinationPlace]);
+    }
+
+    // Resolve the map action promise
+    if (actionResolverRef.current) {
+      actionResolverRef.current();
+      actionResolverRef.current = null;
+    }
+    setIsActionPending(false);
+  }, []);
+
+
+  const handleSearchResults = useCallback((places: PlaceData[]) => {
+    // Deduplicate by ID
+    const seen = new Set<string>();
+    const uniquePlaces = places.filter(p => {
+      if (!p.id || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+
+    setPlacesList(uniquePlaces);
+    // Resolve the map action promise
+    if (actionResolverRef.current) {
+      actionResolverRef.current();
+      actionResolverRef.current = null;
+    }
+    setIsActionPending(false);
   }, []);
 
   const clearSearchBarDirectionError = useCallback(() => {
@@ -141,6 +210,13 @@ function App() {
         setMobileDirectionsPending(false);
       }
     }
+
+    // Resolve the map action promise on error too
+    if (actionResolverRef.current) {
+      actionResolverRef.current();
+      actionResolverRef.current = null;
+    }
+    setIsActionPending(false);
   }, [lastDirectionSource, mobileDirectionsPending]);
 
   // Handle mobile directions success - close sheet and clear inputs
@@ -156,6 +232,8 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
+
+
       {/* Top Header with Search Bar and Theme Toggle */}
       <header className="flex items-center gap-4 px-2 sm:px-4 py-2 sm:py-3 border-b bg-background z-[1100] shrink-0 fixed top-0 left-0 right-0 md:relative md:inset-auto">
         <div className="hidden sm:flex items-center gap-2 shrink-0">
@@ -237,13 +315,14 @@ function App() {
             onPlaceDetailsLoaded={handlePlaceDetailsLoaded}
             onDirectionsResult={handleDirectionsResult}
             onDirectionsError={handleDirectionsError}
+            onSearchResults={handleSearchResults}
             placeIdToFetch={placeIdToFetch}
             resizeTrigger={`${isChatOpen}-${isPlacesListCollapsed}`}
           />
 
           {/* Direction Results Panel */}
           {directionResult && (
-            <div className="fixed md:absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 md:p-4 z-20 max-w-md w-[90%] sm:w-auto">
+            <div className="fixed md:absolute bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 md:p-4 z-[1050] max-w-md w-[90%] sm:w-auto">
               <div className="flex items-baseline justify-between mb-1 md:mb-2">
                 <div>
                   <h3 className="font-semibold text-xs md:text-sm">Travel Times</h3>
@@ -310,6 +389,7 @@ function App() {
             selectedPlaceId={null}
             isCollapsed={isPlacesListCollapsed}
             onCollapsedChange={setIsPlacesListCollapsed}
+            isLoading={isActionPending}
           />
         </div>
       </div>
@@ -366,7 +446,7 @@ function App() {
             <ChevronDown className="h-5 w-5" />
           </Button>
         </div>
-        <div className="overflow-y-auto h-[calc(100%-60px)]">
+        <div className="overflow-y-auto h-[calc(100%-60px)] relative">
           <div className="p-3 space-y-2 pb-20">
             {placesList.map((place, index) => (
               <div
@@ -401,6 +481,16 @@ function App() {
               </div>
             ))}
           </div>
+
+          {/* Mobile Loading Overlay */}
+          {isActionPending && (
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center p-4 text-center">
+              <div className="bg-background border rounded-2xl p-6 shadow-xl flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                <p className="font-medium text-sm">Updating places...</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -466,7 +556,7 @@ function App() {
             </div>
           )}
           <Button
-            className="w-full mt-6"
+            className="w-full mt-8"
             disabled={!mobileDestination.trim() || mobileDirectionLoading || mobileDirectionsPending}
             onClick={async () => {
               setMobileDirectionError(null);

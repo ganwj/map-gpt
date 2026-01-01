@@ -1,15 +1,18 @@
 // Shared types for the MapGPT application
 
 export interface MapAction {
-  action: 'searchOne' | 'searchMany' | 'goto' | 'directions' | 'marker';
-  query?: string;
-  queries?: string[];
+  action: 'goto' | 'searchOne' | 'searchMany' | 'directions' | 'itinerary' | 'marker';
+  source?: 'chat' | 'searchBar' | 'button';
+  trigger?: 'manual' | 'ai';
   lat?: number;
   lng?: number;
   zoom?: number;
+  query?: string;
+  queries?: string[];
   title?: string;
   origin?: string;
   destination?: string;
+  itinerary?: any;
   _timestamp?: number;
 }
 
@@ -109,6 +112,8 @@ export const DURATION_OPTIONS = ['1-2 days', '3-4 days', '5-7 days', '1-2 weeks'
 export interface DirectionResult {
   origin: string;
   destination: string;
+  originPlace?: PlaceData | null;
+  destinationPlace?: PlaceData | null;
   routes: {
     mode: 'driving' | 'walking' | 'bicycling'; // transit not supported by OpenRouteService
     duration: string;

@@ -31,15 +31,18 @@ const SYSTEM_PROMPT = `You are MapGPT, an intelligent assistant that helps users
 IMPORTANT RULES:
 1. Highlight ALL places names in **bold** - use ONLY the place name (e.g., **Eiffel Tower**, NOT **Eiffel Tower Paris France**)
 2. Do NOT ask if the user wants to see locations on the map - just provide the information directly
-3. Do NOT include any JSON map actions in your response (the only JSON allowed is inside the [PLACES] block)
-4. In the text response, show ONLY the place name without city/country. The city/country is ONLY needed in the [PLACES] JSON for search accuracy
+3. Do NOT include any JSON map actions in your response EXCEPT for directions requests.
+4. When the user asks for directions, ALWAYS include a JSON block with the action "directions", "origin", and "destination" in your response. Example: {"action": "directions", "origin": "Eiffel Tower Paris France", "destination": "Louvre Museum Paris France"}.
+5. In the text response, show ONLY the place name without city/country. The city/country is ONLY needed in the JSON for search accuracy.
+6. IMPORTANT: When users ask for directions, do NOT include the origin or destination names in the [PLACES] JSON block. Only use [PLACES] for suggesting additional, separate locations.
 
 At the end of EVERY response that mentions places, include a [PLACES] section with valid JSON ONLY. Format EXACTLY like this:
 [PLACES]
-{"suggested":["Place Name 1 City Country","Place Name 2 City Country","Place Name 3 City Country"]}
+{"suggested":["Attraction - Place Name 1, City, Country","Restaurant - Place Name 2, City, Country","Hotel - Place Name 3, City, Country"]}
 [/PLACES]
 
-Include city AND country with every place name for accurate searching.
+Include city AND country with every place name for accurate searching. IMPORTANT: You MUST include EVERY place name you mentioned in your response in the [PLACES] block. Do NOT leave any out. For example, if you suggest a beach in Miami, ensure the JSON includes "South Beach, Miami, USA". 
+Include the place category at the beginning of each search query (e.g., "Restaurant - Sukiyabashi Jiro, Tokyo, Japan") to ensure Nominatim finds the correct type of establishment.
 
 At the end of your response, ALWAYS include 2-3 follow-up questions that the user can directly send to you. These should be phrased as requests or questions FROM the user's perspective, NOT questions TO the user. Format them as:
 [FOLLOWUP]
@@ -66,9 +69,10 @@ IMPORTANT RULES:
 1. For TRIP PLANNING requests (creating itineraries): Create a day-by-day itinerary using "### Day X: Title" format
 2. Highlight ALL places names in **bold**
 3. NEVER return just the [PLACES] section alone - always include descriptive text about each place BEFORE the [PLACES] section
-4. In the text response, show ONLY the place name without city/country. The city/country is ONLY needed in the [PLACES] JSON for search accuracy
-
-Do NOT include any JSON map actions.
+5. IMPORTANT: When users ask for directions, do NOT include the origin or destination names in the [PLACES] JSON block. Only use [PLACES] for suggesting additional, separate locations.
+6. When the user asks for directions, ALWAYS include a JSON block with the action "directions", "origin", and "destination" in your response. Example: {"action": "directions", "origin": "Station - Tokyo Station, Tokyo, Japan", "destination": "Temple - Senso-ji Temple, Tokyo, Japan"}.
+7. IMPORTANT: ALWAYS include city and country with every place name in the JSON (e.g., "South Beach, Miami, USA") to ensure the search finds the correct location.
+8. Include the place category at the beginning of each search query in the JSON (e.g., "Attraction - Senso-ji Temple, Tokyo, Japan", "Restaurant - Ichiran Ramen, Tokyo, Japan") to ensure the geocoder returns the intended type of place.
 
 At the end of EVERY response, include a [PLACES] section with valid JSON ONLY (no markdown fences, no prose inside the block).
 
@@ -80,18 +84,18 @@ For ITINERARY responses, use this JSON schema:
       "key": "Day 1",
       "periods": {
         "Morning": [
-          { "options": ["Narita International Airport Tokyo Japan"], "optional": false },
-          { "options": ["Tokyo Station Tokyo Japan"], "optional": false, "travelTime": "1 hr by train" }
+          { "options": ["Airport - Narita International Airport, Tokyo, Japan"], "optional": false },
+          { "options": ["Station - Tokyo Station, Tokyo, Japan"], "optional": false, "travelTime": "1 hr by train" }
         ],
         "Afternoon": [
-          { "options": ["Senso-ji Temple Tokyo Japan"], "optional": false, "travelTime": "20 min by subway" },
-          { "options": ["Nakamise Street Tokyo Japan"], "optional": false, "travelTime": "5 min walk" }
+          { "options": ["Temple - Senso-ji Temple, Tokyo, Japan"], "optional": false, "travelTime": "20 min by subway" },
+          { "options": ["Attraction - Nakamise Street, Tokyo, Japan"], "optional": false, "travelTime": "5 min walk" }
         ],
         "Evening": [
-          { "options": ["Ichiran Ramen Tokyo Japan"], "optional": false, "travelTime": "15 min by subway" }
+          { "options": ["Restaurant - Ichiran Ramen, Tokyo, Japan"], "optional": false, "travelTime": "15 min by subway" }
         ],
         "Accommodation": [
-          { "options": ["Hotel Gracery Shinjuku Tokyo Japan"], "optional": false, "travelTime": "10 min walk" }
+          { "options": ["Hotel - Hotel Gracery Shinjuku, Tokyo, Japan"], "optional": false, "travelTime": "10 min walk" }
         ]
       }
     },
@@ -99,11 +103,11 @@ For ITINERARY responses, use this JSON schema:
       "key": "Day 2 (Option A)",
       "periods": {
         "Morning": [
-          { "options": ["Palace of Versailles Versailles France"], "optional": false, "travelTime": "45 min by train" }
+          { "options": ["Attraction - Palace of Versailles, Versailles, France"], "optional": false, "travelTime": "45 min by train" }
         ],
         "Evening": [
-          { "options": ["Bistrot Paul Bert Paris France", "Chez Janou Paris France"], "optional": false, "travelTime": "15 min by metro" },
-          { "options": ["Seine River Cruise Paris France"], "optional": true, "travelTime": "10 min walk" }
+          { "options": ["Restaurant - Bistrot Paul Bert, Paris, France", "Restaurant - Chez Janou, Paris, France"], "optional": false, "travelTime": "15 min by metro" },
+          { "options": ["Attraction - Seine River Cruise, Paris, France"], "optional": true, "travelTime": "10 min walk" }
         ]
       }
     }
@@ -119,7 +123,7 @@ IMPORTANT for [PLACES] JSON:
 
 For FOLLOW-UP responses (restaurant recommendations, activity suggestions, specific questions, etc.), list ONLY the places SUGGESTED in this JSON schema:
 [PLACES]
-{"suggested":["Restaurant Name Tokyo Japan","Restaurant Name 2 Tokyo Japan","Restaurant Name 3 Tokyo Japan"]}
+{"suggested":["Restaurant - Place Name 1, Tokyo, Japan","Restaurant - Place Name 2, Tokyo, Japan","Restaurant - Place Name 3, Tokyo, Japan"]}
 [/PLACES]
 
 At the end of your response, ALWAYS include 2-3 follow-up questions that the user can directly send to you. These should be phrased as requests FROM the user's perspective. Format them as:
@@ -194,7 +198,8 @@ app.post('/api/chat', async (req, res) => {
       model: 'gpt-5-mini',
       instructions: systemPrompt,
       input: inputItems,
-      reasoning: { effort: planningMode ? "normal" : "minimal" }
+      max_output_tokens: 4096,
+      reasoning: { effort: "low" }
     });
 
     const assistantMessage = response.output_text;
@@ -390,11 +395,16 @@ app.get('/api/directions', async (req, res) => {
       return res.status(400).json({ error: 'Profile, start, and end coordinates are required' });
     }
 
-    const orsUrl = `https://api.openrouteservice.org/v2/directions/${profile}/geojson?start=${start}&end=${end}`;
+    const apiKey = process.env.OPENROUTESERVICE_API_KEY;
+    if (!apiKey) {
+      console.error('OPENROUTESERVICE_API_KEY is not defined in backend .env');
+      return res.status(500).json({ error: 'Directions service is not configured on the server' });
+    }
+
+    const orsUrl = `https://api.openrouteservice.org/v2/directions/${profile}?api_key=${apiKey}&start=${start}&end=${end}`;
 
     const response = await fetch(orsUrl, {
       headers: {
-        'Authorization': process.env.OPENROUTESERVICE_API_KEY,
         'Accept': 'application/geo+json',
       },
     });

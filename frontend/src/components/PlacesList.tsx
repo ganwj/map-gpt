@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { MapPin, ChevronRight, Search, X, Navigation } from 'lucide-react';
+import { MapPin, ChevronRight, Search, X, Navigation, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ interface PlacesListProps {
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   onGetDirections: (place: PlaceData) => void;
+  isLoading?: boolean;
 }
 
 
@@ -23,7 +24,8 @@ export function PlacesList({
   onGetDirections,
   selectedPlaceId,
   isCollapsed: controlledCollapsed,
-  onCollapsedChange
+  onCollapsedChange,
+  isLoading = false
 }: PlacesListProps) {
   const [width, setWidth] = useState<number>(PANEL_DIMENSIONS.DEFAULT_WIDTH);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -149,70 +151,82 @@ export function PlacesList({
           )}
         </div>
       </div>
-      <ScrollArea className="flex-1">
-        {filteredPlaces.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <MapPin className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">No places to display</p>
-            <p className="text-sm text-muted-foreground/70 mt-1">Search for places using the chat</p>
-          </div>
-        ) : (
-          <div className="p-3">
-            {filteredPlaces.map((place, index) => (
-              <div
-                key={`${place.id}-${index}`}
-                className={`w-full group p-4 rounded-xl mb-3 transition-colors hover:bg-accent border ${selectedPlaceId === place.id ? 'bg-accent border-primary' : 'border-transparent hover:border-border'
-                  }`}
-              >
-                <div className="flex gap-3 items-start">
-                  {/* Location icon - clickable to view on map */}
-                  <button
-                    onClick={() => onPlaceClick(place)}
-                    className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-                  >
-                    <MapPin className="h-5 w-5 text-primary" />
-                  </button>
-
-                  <div className="flex-1 min-w-0">
+      <div className="flex-1 relative min-h-0">
+        <ScrollArea className="h-full">
+          {filteredPlaces.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+              <MapPin className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">No places to display</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">Search for places using the chat</p>
+            </div>
+          ) : (
+            <div className="p-3">
+              {filteredPlaces.map((place, index) => (
+                <div
+                  key={`${place.id}-${index}`}
+                  className={`w-full group p-4 rounded-xl mb-3 transition-colors hover:bg-accent border ${selectedPlaceId === place.id ? 'bg-accent border-primary' : 'border-transparent hover:border-border'
+                    }`}
+                >
+                  <div className="flex gap-3 items-start">
+                    {/* Location icon - clickable to view on map */}
                     <button
                       onClick={() => onPlaceClick(place)}
-                      className="w-full text-left"
+                      className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
                     >
-                      <h4 className="font-semibold text-base truncate">{place.displayName}</h4>
-                      {place.formattedAddress && (
-                        <p className="text-sm text-muted-foreground truncate mt-0.5">
-                          {place.formattedAddress}
-                        </p>
-                      )}
-                      {place.types && (
-                        <p className="text-xs text-muted-foreground capitalize mt-1">
-                          {place.types[0]?.replace(/_/g, ' ')}
-                        </p>
-                      )}
+                      <MapPin className="h-5 w-5 text-primary" />
                     </button>
 
-                    {/* Get Directions Button */}
-                    <div className="mt-3">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 text-xs w-full bg-background border hover:bg-primary hover:text-primary-foreground group-hover:border-primary/50 transition-all font-medium"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onGetDirections(place);
-                        }}
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => onPlaceClick(place)}
+                        className="w-full text-left"
                       >
-                        <Navigation className="h-3.5 w-3.5 mr-1.5" />
-                        Get Directions
-                      </Button>
+                        <h4 className="font-semibold text-base truncate">{place.displayName}</h4>
+                        {place.formattedAddress && (
+                          <p className="text-sm text-muted-foreground truncate mt-0.5">
+                            {place.formattedAddress}
+                          </p>
+                        )}
+                        {place.types && (
+                          <p className="text-xs text-muted-foreground capitalize mt-1">
+                            {place.types[0]?.replace(/_/g, ' ')}
+                          </p>
+                        )}
+                      </button>
+
+                      {/* Get Directions Button */}
+                      <div className="mt-3">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-8 text-xs w-full bg-background border hover:bg-primary hover:text-primary-foreground group-hover:border-primary/50 transition-all font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onGetDirections(place);
+                          }}
+                        >
+                          <Navigation className="h-3.5 w-3.5 mr-1.5" />
+                          Get Directions
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center p-4 text-center animate-in fade-in duration-200">
+            <div className="bg-background border rounded-xl p-4 shadow-lg flex flex-col items-center gap-3">
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+              <p className="text-xs font-medium">Fetching places...</p>
+            </div>
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
