@@ -142,7 +142,6 @@ describe('ChatPanel', () => {
 
   it('should call onClose on mobile when clicking places by day button with flowchart data', () => {
     const mockOnClose = vi.fn();
-    const mockOnViewPlaces = vi.fn();
     
     // Mock window.innerWidth for mobile
     Object.defineProperty(window, 'innerWidth', { value: 500, writable: true });
@@ -151,7 +150,6 @@ describe('ChatPanel', () => {
       <ChatPanel
         onMapAction={mockOnMapAction}
         onClose={mockOnClose}
-        onViewPlaces={mockOnViewPlaces}
       />
     );
 

@@ -91,8 +91,6 @@ export function SearchBar({ onSearch, onGetDirections, directionError, onClearDi
     }
 
     onGetDirections(finalOrigin, destination.trim());
-    // Don't auto-close - let user see if there's an error
-    // Will close manually when user clicks X or on success
   };
 
   return (
