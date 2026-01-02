@@ -112,10 +112,15 @@ function MapController({
 
                                 onPlaceDetailsLoaded?.(place);
                                 onSearchResults?.([place]);
+                            } else {
+                                onSearchResults?.([]);
                             }
                         } catch (error) {
                             console.error('Search error:', error);
+                            onSearchResults?.([]);
                         }
+                    } else {
+                        onSearchResults?.([]);
                     }
                     break;
 
@@ -160,12 +165,17 @@ function MapController({
                                     map.fitBounds(bounds, { padding: [50, 50] });
                                 }
 
-                                // No longer redundant: use the foundPlaces we already collected
+                                // Use the foundPlaces we already collected
                                 onSearchResults?.(foundPlaces);
+                            } else {
+                                onSearchResults?.([]);
                             }
                         } catch (error) {
                             console.error('Search many error:', error);
+                            onSearchResults?.([]);
                         }
+                    } else {
+                        onSearchResults?.([]);
                     }
                     break;
 

@@ -4,10 +4,10 @@ import { ItineraryFlowchart } from './ItineraryFlowchart';
 import type { TimePeriodPlaces, PlaceData, PlacesDay } from '@/types';
 
 const mockTimePeriods: TimePeriodPlaces = {
-  Morning: ['Senso-ji Temple Tokyo Japan', 'Nakamise Street Tokyo Japan'],
-  Afternoon: ['Tokyo Skytree Tokyo Japan', 'Ueno Park Tokyo Japan'],
-  Evening: ['Shibuya Crossing Tokyo Japan'],
-  Accommodation: ['Hotel Gracery Shinjuku Tokyo Japan'],
+  Morning: ['Senso-ji Temple Tokyo, Japan', 'Nakamise Street Tokyo, Japan'],
+  Afternoon: ['Tokyo Skytree Tokyo, Japan', 'Ueno Park Tokyo, Japan'],
+  Evening: ['Shibuya Crossing Tokyo, Japan'],
+  Accommodation: ['Hotel Gracery Shinjuku Tokyo, Japan'],
 };
 
 const mockPlaces: PlaceData[] = [
@@ -33,12 +33,12 @@ const mockDayV2: PlacesDay = {
   key: 'Day 1',
   periods: {
     Morning: [
-      { options: ['Senso-ji Temple Tokyo Japan'], travelTime: '30 min by train' },
-      { options: ['Asakusa Shrine Tokyo Japan', 'Hoppy Street Tokyo Japan'], travelTime: '5 min walk' },
-      { options: ['Nakamise Street Tokyo Japan'], optional: true, travelTime: '2 min walk' },
+      { options: ['Senso-ji Temple Tokyo, Japan'], travelTime: '30 min by train' },
+      { options: ['Asakusa Shrine Tokyo, Japan', 'Hoppy Street Tokyo, Japan'], travelTime: '5 min walk' },
+      { options: ['Nakamise Street Tokyo, Japan'], optional: true, travelTime: '2 min walk' },
     ],
   },
-  suggested: ['Ichiran Ramen Shibuya Tokyo Japan'],
+  suggested: ['Ichiran Ramen Shibuya Tokyo, Japan'],
 };
 
 describe('ItineraryFlowchart', () => {
@@ -135,18 +135,18 @@ describe('ItineraryFlowchart', () => {
     const placeButton = screen.getByText('Senso-ji Temple');
     fireEvent.click(placeButton);
 
-    expect(mockOnPlaceClick).toHaveBeenCalledWith('Senso-ji Temple Tokyo Japan');
+    expect(mockOnPlaceClick).toHaveBeenCalledWith('Senso-ji Temple Tokyo, Japan');
     expect(mockOnClose).toHaveBeenCalled();
   });
 
   it('should group alternatives together in itinerary mode', () => {
     const timePeriodsWithAlternatives: TimePeriodPlaces = {
       Morning: [
-        'Senso-ji Temple Tokyo Japan',
-        'Alternative: Asakusa Shrine Tokyo Japan | Hoppy Street Tokyo Japan',
-        'Nakamise Street Tokyo Japan',
+        'Senso-ji Temple Tokyo, Japan',
+        'Alternative: Asakusa Shrine Tokyo, Japan | Hoppy Street Tokyo, Japan',
+        'Nakamise Street Tokyo, Japan',
       ],
-      Afternoon: ['Tokyo Skytree Tokyo Japan'],
+      Afternoon: ['Tokyo Skytree Tokyo, Japan'],
     };
 
     render(
@@ -168,9 +168,9 @@ describe('ItineraryFlowchart', () => {
   it('should allow selecting alternatives', () => {
     const timePeriodsWithAlternatives: TimePeriodPlaces = {
       Morning: [
-        'Senso-ji Temple Tokyo Japan',
-        'Alternative: Asakusa Shrine Tokyo Japan | Hoppy Street Tokyo Japan',
-        'Nakamise Street Tokyo Japan',
+        'Senso-ji Temple Tokyo, Japan',
+        'Alternative: Asakusa Shrine Tokyo, Japan | Hoppy Street Tokyo, Japan',
+        'Nakamise Street Tokyo, Japan',
       ],
     };
 
@@ -195,7 +195,7 @@ describe('ItineraryFlowchart', () => {
 
   it('should not render empty time periods', () => {
     const partialTimePeriods: TimePeriodPlaces = {
-      Morning: ['Senso-ji Temple Tokyo Japan'],
+      Morning: ['Senso-ji Temple Tokyo, Japan'],
     };
 
     render(
@@ -234,7 +234,7 @@ describe('ItineraryFlowchart', () => {
 
   it('should render v2 places (overriding legacy timePeriods)', () => {
     const legacyTimePeriods: TimePeriodPlaces = {
-      Morning: ['Different Place Tokyo Japan'],
+      Morning: ['Different Place Tokyo, Japan'],
     };
 
     render(
@@ -289,17 +289,17 @@ describe('ItineraryFlowchart', () => {
       key: 'Day 1',
       periods: {
         Morning: [
-          { options: ['Senso-ji Temple Tokyo Japan'] },
-          { options: ['Nakamise Street Tokyo Japan'] },
+          { options: ['Senso-ji Temple Tokyo, Japan'] },
+          { options: ['Nakamise Street Tokyo, Japan'] },
         ],
       },
-      suggested: ['Ichiran Ramen Shibuya Tokyo Japan'],
+      suggested: ['Ichiran Ramen Shibuya Tokyo, Japan'],
     };
 
     render(
       <ItineraryFlowchart
         day="Day 1"
-        timePeriods={{ Morning: ['Different Place Tokyo Japan'] }}
+        timePeriods={{ Morning: ['Different Place Tokyo, Japan'] }}
         placesDay={dayV2WithTwoStops}
         places={mockPlaces}
         onPlaceClick={mockOnPlaceClick}
@@ -323,10 +323,10 @@ describe('ItineraryFlowchart', () => {
       key: 'Day 1',
       periods: {
         Morning: [
-          { options: ['Senso-ji Temple Tokyo Japan'] },
+          { options: ['Senso-ji Temple Tokyo, Japan'] },
         ],
         Afternoon: [
-          { options: ['Tokyo Skytree Tokyo Japan'] },
+          { options: ['Tokyo Skytree Tokyo, Japan'] },
         ],
       },
       suggested: [],

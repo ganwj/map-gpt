@@ -186,12 +186,12 @@ describe('ChatPanel', () => {
               key: 'Day 1',
               periods: {
                 Morning: [
-                  { options: ['Senso-ji Temple Tokyo Japan'] },
-                  { options: ['Asakusa Shrine Tokyo Japan', 'Hoppy Street Tokyo Japan'] },
-                  { options: ['Nakamise Street Tokyo Japan'], optional: true },
+                  { options: ['Senso-ji Temple Tokyo, Japan'] },
+                  { options: ['Asakusa Shrine Tokyo, Japan', 'Hoppy Street Tokyo, Japan'] },
+                  { options: ['Nakamise Street Tokyo, Japan'], optional: true },
                 ],
               },
-              suggested: ['Ichiran Ramen Shibuya Tokyo Japan'],
+              suggested: ['Ichiran Ramen Shibuya Tokyo, Japan'],
             },
           ],
         },

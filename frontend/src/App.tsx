@@ -153,12 +153,9 @@ function App() {
     setDirectionResult(result);
     setDirectionsSuccess(true);
 
-    // Auto-expand places list
-    setIsPlacesListCollapsed(false);
-
-    // On mobile, show places sheet
-    if (window.innerWidth < 768) {
-      setIsMobilePlacesOpen(true);
+    // Auto-expand places list (desktop only)
+    if (window.innerWidth >= 768) {
+      setIsPlacesListCollapsed(false);
     }
 
     // Add origin and destination to places list
@@ -382,15 +379,23 @@ function App() {
 
         {/* Places List Panel - Desktop: Right column */}
         <div className="hidden md:flex col-start-3 row-start-1 h-full overflow-hidden">
-          <PlacesList
-            places={placesList}
-            onPlaceClick={handlePlaceClick}
-            onGetDirections={handleGetDirections}
-            selectedPlaceId={null}
-            isCollapsed={isPlacesListCollapsed}
-            onCollapsedChange={setIsPlacesListCollapsed}
-            isLoading={isActionPending}
-          />
+          <div className="flex flex-col h-full border-l bg-background">
+            {/* Alignment header - matches ChatPanel header */}
+            <div className="flex items-center justify-start p-2 border-b h-[53px]">
+              {/* Spacer/Alignment element */}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <PlacesList
+                places={placesList}
+                onPlaceClick={handlePlaceClick}
+                onGetDirections={handleGetDirections}
+                selectedPlaceId={null}
+                isCollapsed={isPlacesListCollapsed}
+                onCollapsedChange={setIsPlacesListCollapsed}
+                isLoading={isActionPending}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -556,7 +561,7 @@ function App() {
             </div>
           )}
           <Button
-            className="w-full mt-8"
+            className="w-full mt-2"
             disabled={!mobileDestination.trim() || mobileDirectionLoading || mobileDirectionsPending}
             onClick={async () => {
               setMobileDirectionError(null);

@@ -104,7 +104,7 @@ export function ItineraryFlowchart({ day, timePeriods, placesDay, places, onPlac
       if (normalizedDisplayName === needle) score += 100;
 
       // Check if display name is contained in the itinerary place name (common case)
-      // e.g., "Senso-ji Temple" in "Senso-ji Temple Tokyo Japan"
+      // e.g., "Senso-ji Temple" in "Senso-ji Temple Tokyo, Japan"
       if (displayName && cleanedName.includes(displayName)) score += 80;
       if (displayName && cleanedName.startsWith(displayName)) score += 20;
 
