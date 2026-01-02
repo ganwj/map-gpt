@@ -138,11 +138,11 @@ function App() {
       setDirectionResult(null);
       setLastDirectionSource('searchBar');
     } else {
-      // On mobile: just populate destination in search bar if possible, 
-      // but the user wants to remain at the search bar and NOT change to directions specialized sheet.
-      setSearchBarShowDirections(false); // Ensure we stay in search mode
-      setSearchBarExternalDestination(destination);
-      setIsMobilePlacesOpen(false); // Still close the list to show the map
+      // On mobile: populate destination in the dedicated directions sheet and open it
+      setIsMobileDirectionsOpen(true);
+      setMobileDestination(destination);
+      setIsMobilePlacesOpen(false); // Still close the list to show the map and directions sheet
+      setIsChatOpen(false); // Also close chat if it's open
     }
   }, []);
 
@@ -315,6 +315,7 @@ function App() {
               onMapAction={handleMapAction}
               selectedPlace={selectedPlace}
               places={placesList}
+              onClose={() => setIsChatOpen(false)}
               onShowFlowchart={setFlowchartData}
             />
           </div>
@@ -433,6 +434,7 @@ function App() {
             onMapAction={handleMapAction}
             selectedPlace={selectedPlace}
             places={placesList}
+            onClose={() => setIsChatOpen(false)}
             onShowFlowchart={setFlowchartData}
           />
         </div>
