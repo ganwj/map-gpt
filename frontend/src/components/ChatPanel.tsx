@@ -473,7 +473,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                       <Button
                         variant="outline"
                         size="sm"
-                        className="mt-2 h-7 text-xs"
+                        className="mt-3 h-7 text-xs"
                         onClick={() => retryMessage(message.failedMessage!)}
                       >
                         <Send className="mr-1 h-3 w-3" />
