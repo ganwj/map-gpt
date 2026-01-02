@@ -483,9 +483,9 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                       <div className="mt-3 space-y-3">
                         {/* Suggested Places */}
                         {message.placesByDay && Object.keys(message.placesByDay).length > 0 && (
-                          <div className="pt-2 border-t border-border/50 space-y-2">
+                          <div className="pt-2 border-t border-border/50 space-y-1.5 md:space-y-2">
                             <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5 px-1">
-                              Visit suggested places:
+                              View suggested places:
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {Object.entries(message.placesByDay).map(([day, dayPlaces]) => {
@@ -522,7 +522,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                                 );
                               })}
                             </div>
-                            <p className="text-[10px] text-muted-foreground italic flex items-center gap-2 px-1">
+                            <p className="text-[10px] text-muted-foreground italic flex items-center gap-1 md:gap-2 px-1">
                               <AlertCircle className="h-3 w-3" />
                               Note: Places shown may be inaccurate.
                             </p>

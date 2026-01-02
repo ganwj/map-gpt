@@ -438,7 +438,7 @@ function App() {
       <div
         className={`md:hidden fixed inset-x-0 bottom-16 z-[1200] bg-background rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out ${isMobilePlacesOpen ? 'translate-y-0' : 'translate-y-[calc(100%+64px)]'
           }`}
-        style={{ height: 'calc(90vh - 64px)', maxHeight: 'calc(100vh - 100px)' }}
+        style={{ height: 'calc(85vh - 64px)', maxHeight: 'calc(100vh - 100px)' }}
       >
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
