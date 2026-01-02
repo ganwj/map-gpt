@@ -93,12 +93,8 @@ function MapController({
                 case 'searchOne':
                     if (mapAction.query) {
                         try {
-                            const bounds = map.getBounds();
-                            const viewbox = `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
-
                             const results = await searchPlaces(mapAction.query, {
                                 limit: 1,
-                                viewbox,
                                 bounded: false // Bias only, don't strictly limit
                             });
 
@@ -129,16 +125,13 @@ function MapController({
                         try {
                             const newMarkers: Array<{ position: [number, number]; title?: string; id?: string }> = [];
                             const bounds = L.latLngBounds([]);
-                            const mapBounds = map.getBounds();
-                            const viewbox = `${mapBounds.getWest()},${mapBounds.getNorth()},${mapBounds.getEast()},${mapBounds.getSouth()}`;
                             const foundPlaces: PlaceData[] = [];
 
                             // Process queries sequentially with delay to avoid Nominatim rate limits
-                            for (const query of mapAction.queries) {
+                            for (let query of mapAction.queries) {
                                 try {
                                     const results = await searchPlaces(query, {
                                         limit: 1,
-                                        viewbox,
                                         bounded: false // Bias only
                                     });
                                     if (results.length > 0) {

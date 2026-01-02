@@ -47,6 +47,63 @@ async function rateLimitedFetch(url: string): Promise<Response> {
   return fetch(url);
 }
 
+const CACHE_KEY_PREFIX = 'mapgpt_places_cache_';
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+interface CachedResult {
+  data: NominatimSearchResult[];
+  timestamp: number;
+}
+
+function getFromCache(query: string): NominatimSearchResult[] | null {
+  try {
+    const key = CACHE_KEY_PREFIX + query.toLowerCase();
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+
+    const parsed: CachedResult = JSON.parse(cached);
+    if (Date.now() - parsed.timestamp > CACHE_TTL) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return parsed.data;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Clear the places cache from localStorage
+ */
+export function clearPlacesCache() {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  } catch (e) {
+    console.error('Failed to clear places cache:', e);
+  }
+}
+
+function saveToCache(query: string, data: NominatimSearchResult[]) {
+  try {
+    const key = CACHE_KEY_PREFIX + query.toLowerCase();
+    const result: CachedResult = {
+      data,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(key, JSON.stringify(result));
+  } catch (e) {
+    // LocalStorage might be full or unavailable
+  }
+}
+
 /**
  * Search for places using Nominatim
  */
@@ -60,6 +117,13 @@ export async function searchPlaces(
   }
 ): Promise<NominatimSearchResult[]> {
   const limit = options?.limit ?? 5;
+
+  // Check cache first (ignore options for simple query caching)
+  const cached = getFromCache(query);
+  if (cached) {
+    return cached.slice(0, limit);
+  }
+
   const params = new URLSearchParams({
     q: query,
     format: 'json',
@@ -89,7 +153,14 @@ export async function searchPlaces(
       throw new Error(`Nominatim search failed: ${response.status}`);
     }
 
-    return await response.json();
+    const results = await response.json();
+
+    // Cache the results
+    if (results && Array.isArray(results) && results.length > 0) {
+      saveToCache(query, results);
+    }
+
+    return results;
   } catch (error) {
     console.error('Nominatim search error:', error);
     return [];

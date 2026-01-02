@@ -8,6 +8,7 @@ import type { MapAction, SelectedPlace, PlaceData, Message, PlanningPreferences,
 import { INTEREST_OPTIONS, TRAVEL_STYLES, DURATION_OPTIONS } from '@/types';
 import { API_URL, getRandomSuggestions } from '@/constants';
 import { ItineraryFlowchart } from './ItineraryFlowchart';
+import { clearPlacesCache } from '@/lib/nominatim';
 
 interface ChatPanelProps {
   onMapAction: (action: MapAction) => void | Promise<void>;
@@ -242,6 +243,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
   const clearChat = () => {
     setMessages([]);
     setConversationId(null);
+    clearPlacesCache();
   };
 
   const retryMessage = (failedMessage: string) => {
@@ -524,7 +526,7 @@ export function ChatPanel({ onMapAction, selectedPlace, places = [], onClose, on
                             </div>
                             <p className="text-[10px] text-muted-foreground italic flex items-center gap-1 md:gap-2 px-1">
                               <AlertCircle className="h-3 w-3" />
-                              Note: Places shown may be inaccurate.
+                              Note: Place data might be unavailable.
                             </p>
                           </div>
                         )}

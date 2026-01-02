@@ -10,6 +10,7 @@ import type { MapAction, PlaceData, SelectedPlace, DirectionResult, DirectionErr
 import { ItineraryFlowchart } from '@/components/ItineraryFlowchart';
 import { PlacesAutocomplete } from '@/components/PlacesAutocomplete';
 import { getCurrentLocation } from '@/lib/geolocation';
+import { clearPlacesCache } from '@/lib/nominatim';
 import Logo from '@/assets/logo.svg';
 
 function App() {
@@ -44,6 +45,11 @@ function App() {
 
   // Ref to resolve promises returned by handleMapAction
   const actionResolverRef = useRef<(() => void) | null>(null);
+
+  // Clear places cache on refresh/initialization
+  useEffect(() => {
+    clearPlacesCache();
+  }, []);
 
   const handleMapAction = useCallback((action: MapAction) => {
     // Resolve any previous pending action
@@ -108,25 +114,35 @@ function App() {
         zoom: 16,
         title: place.displayName,
       });
+
+      // Close mobile places sheet on selection
+      if (window.innerWidth < 768) {
+        setIsMobilePlacesOpen(false);
+      }
     }
   }, []);
 
   const handleGetDirections = useCallback((place: PlaceData) => {
     const destination = place.formattedAddress || place.displayName || '';
 
-    // On desktop: populate SearchBar
-    setSearchBarShowDirections(true);
-    setSearchBarExternalDestination(destination);
-    setSearchBarDirectionError(null);
-    setDirectionResult(null);
-    setLastDirectionSource('searchBar');
-
-    // On mobile: switch to directions tab and populate destination
-    if (window.innerWidth < 768) {
+    // On desktop: populate SearchBar with directions mode
+    if (window.innerWidth >= 768) {
       setIsMobileDirectionsOpen(true);
       setMobileDestination(destination);
       setIsMobilePlacesOpen(false);
       setIsChatOpen(false);
+
+      setSearchBarShowDirections(true);
+      setSearchBarExternalDestination(destination);
+      setSearchBarDirectionError(null);
+      setDirectionResult(null);
+      setLastDirectionSource('searchBar');
+    } else {
+      // On mobile: just populate destination in search bar if possible, 
+      // but the user wants to remain at the search bar and NOT change to directions specialized sheet.
+      setSearchBarShowDirections(false); // Ensure we stay in search mode
+      setSearchBarExternalDestination(destination);
+      setIsMobilePlacesOpen(false); // Still close the list to show the map
     }
   }, []);
 
@@ -380,10 +396,6 @@ function App() {
         {/* Places List Panel - Desktop: Right column */}
         <div className="hidden md:flex col-start-3 row-start-1 h-full overflow-hidden">
           <div className="flex flex-col h-full border-l bg-background">
-            {/* Alignment header - matches ChatPanel header */}
-            <div className="flex items-center justify-start p-2 border-b h-[53px]">
-              {/* Spacer/Alignment element */}
-            </div>
             <div className="flex-1 overflow-hidden">
               <PlacesList
                 places={placesList}
