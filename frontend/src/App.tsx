@@ -503,10 +503,13 @@ function App() {
 
           {/* Mobile Loading Overlay */}
           {isActionPending && (
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center p-4 text-center">
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 text-center animate-in fade-in duration-300">
               <div className="bg-background border rounded-2xl p-6 shadow-xl flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                <p className="font-medium text-sm">Updating places...</p>
+                <div className="relative h-8 w-8">
+                  <div className="absolute inset-0 rounded-full border-2 border-primary/20"></div>
+                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
+                </div>
+                <p className="font-medium text-sm text-muted-foreground">Updating places...</p>
               </div>
             </div>
           )}

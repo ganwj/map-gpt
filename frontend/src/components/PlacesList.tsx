@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
-import { MapPin, ChevronRight, Search, X, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, ChevronRight, Search, X, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -219,10 +219,13 @@ export function PlacesList({
 
         {/* Loading Overlay */}
         {isLoading && (
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center p-4 text-center animate-in fade-in duration-200">
-            <div className="bg-background border rounded-xl p-4 shadow-lg flex flex-col items-center gap-3">
-              <Loader2 className="h-6 w-6 text-primary animate-spin" />
-              <p className="text-xs font-medium">Fetching places...</p>
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4 text-center animate-in fade-in duration-300">
+            <div className="bg-background border rounded-xl p-5 shadow-lg flex flex-col items-center gap-3">
+              <div className="relative h-8 w-8">
+                <div className="absolute inset-0 rounded-full border-2 border-primary/20"></div>
+                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground">Fetching places...</p>
             </div>
           </div>
         )}

@@ -35,6 +35,7 @@ IMPORTANT RULES:
 4. When the user asks for directions, ALWAYS include a JSON block with the action "directions", "origin", and "destination" in your response. Example: {"action": "directions", "origin": "Eiffel Tower Paris France", "destination": "Louvre Museum Paris France"}.
 5. In the text response, show ONLY the place name without city/country. The city/country is ONLY needed in the JSON for search accuracy.
 6. IMPORTANT: When users ask for directions, do NOT include the origin or destination names in the [PLACES] JSON block. Only use [PLACES] for suggesting additional, separate locations.
+7. NEVER return just the [PLACES] section alone - always include descriptive text about each place BEFORE the [PLACES] section.
 
 At the end of EVERY response that mentions places, include a [PLACES] section with valid JSON ONLY. Format EXACTLY like this:
 [PLACES]
@@ -68,10 +69,11 @@ IMPORTANT RULES:
 1. For TRIP PLANNING requests (creating itineraries): Create a day-by-day itinerary using "### Day X: Title" format
 2. Highlight ALL places names in **bold**
 3. NEVER return just the [PLACES] section alone - always include descriptive text about each place BEFORE the [PLACES] section
-5. IMPORTANT: When users ask for directions, do NOT include the origin or destination names in the [PLACES] JSON block. Only use [PLACES] for suggesting additional, separate locations.
-6. When the user asks for directions, ALWAYS include a JSON block with the action "directions", "origin", and "destination" in your response. Example: {"action": "directions", "origin": "Tokyo Station, Tokyo, Japan", "destination": "Senso-ji Temple, Tokyo, Japan"}.
+4. IMPORTANT: When users ask for directions, do NOT include the origin or destination names in the [PLACES] JSON block. Only use [PLACES] for suggesting additional, separate locations.
+5. When the user asks for directions, ALWAYS include a JSON block with the action "directions", "origin", and "destination" in your response. Example: {"action": "directions", "origin": "Tokyo Station, Tokyo, Japan", "destination": "Senso-ji Temple, Tokyo, Japan"}.
+6. Do NOT include any JSON map actions in your response EXCEPT for directions requests.
 7. IMPORTANT: ALWAYS include city and country with every place name in the JSON (e.g., "South Beach, Miami, USA") to ensure the search finds the correct location.
-8. Use the format "Place Name, City, Country" for all search queries in the JSON. Do NOT include category prefixes like "Attraction - " inside the search strings themselves.
+8. In the text response, show ONLY the place name without city/country. The city/country is ONLY needed in the JSON for search accuracy.
 
 At the end of EVERY response, include a [PLACES] section with valid JSON ONLY (no markdown fences, no prose inside the block).
 
